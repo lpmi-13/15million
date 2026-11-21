@@ -5,9 +5,10 @@ set -euo pipefail
 kind="${1:-}"
 script="${2:-}"
 case "$kind" in
+  article) limit=$((32 * 1024 * 1024)); max_pids=400 ;;
   process) limit=$((32 * 1024 * 1024)); max_pids=400 ;;
   socket)  limit=$((64 * 1024 * 1024)); max_pids=8 ;;
-  *) echo 'usage: bounded.sh {process|socket} BASH_COMMAND' >&2; exit 2 ;;
+  *) echo 'usage: bounded.sh {article|process|socket} BASH_COMMAND' >&2; exit 2 ;;
 esac
 [[ -n "$script" && "${3:-}" == '' && "${SUDO_USER:-}" == laborant ]] || exit 2
 
@@ -42,17 +43,19 @@ wait "$child" 2>/dev/null || true
 
 peak=$(cat "$group/memory.peak")
 oom_kill=$(awk '$1 == "oom_kill" {print $2}' "$group/memory.events")
-if [[ "$kind" == process ]]; then
+if [[ "$kind" == process || "$kind" == article ]]; then
   observed=$(awk '/^[0-9]+$/ {n=$1} END {print n+0}' "$run/$kind.log")
+  requested=0
 else
   observed=$(awk -F= '/^count=[0-9]+$/ {n=$2} END {print n+0}' "$run/$kind.log")
+  requested=$(awk -F= '/^target=[0-9]+$/ {n=$2} END {print n+0}' "$run/$kind.log")
 fi
 jq -n --arg kind "$kind" --argjson now "$(date +%s)" \
   --argjson limit "$limit" --argjson peak "$peak" \
-  --argjson oom "$oom_kill" --argjson observed "$observed" \
+  --argjson oom "$oom_kill" --argjson observed "$observed" --argjson requested "$requested" \
   --argjson slab "$slab_peak" \
   '{schema: 1, kind: $kind, unix_time: $now, cgroup_limit: $limit,
-    memory_peak: $peak, observed_count: $observed,
+    memory_peak: $peak, observed_count: $observed, requested_count: $requested,
     bytes_per_item_estimate: (if $observed > 0 then $peak / $observed else 0 end),
     slab_peak_observed: $slab, events: {oom_kill: $oom}, ok: ($oom > 0)}' \
   > "$run/$kind.json"

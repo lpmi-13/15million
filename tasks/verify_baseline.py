@@ -9,10 +9,15 @@ from grading import CheckFailed, add_hint_argument, run
 
 
 PORT_FILE = Path("/tmp/15m-baseline.port")
-EXPECTED = Path("/opt/15m-lab/baseline/bin/webserver_libc")
+EXPECTED = Path("/home/laborant/15m-work/server")
+SOURCE = Path("/home/laborant/15m-work/server.c")
 
 
 def check() -> str:
+    if not EXPECTED.exists():
+        raise CheckFailed("Compile ~/15m-work/server.c into ~/15m-work/server first.")
+    if EXPECTED.stat().st_mtime < SOURCE.stat().st_mtime:
+        raise CheckFailed("server.c is newer than the binary. Compile it again.")
     if not PORT_FILE.exists():
         raise CheckFailed(f"{PORT_FILE} does not exist yet. Start the C baseline with "
                           f"PORT_FILE={PORT_FILE} so that it records its port.")
@@ -30,7 +35,7 @@ def check() -> str:
         except (FileNotFoundError, PermissionError):
             continue
     if not pids:
-        raise CheckFailed("The C baseline (baseline/bin/webserver_libc) is not running.")
+        raise CheckFailed("The C server built from ~/15m-work/server.c is not running.")
     try:
         with socket.create_connection(("127.0.0.1", port), timeout=3) as connection:
             connection.sendall(b"GET / HTTP/1.0\r\n\r\n")

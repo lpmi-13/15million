@@ -20,7 +20,7 @@ for group in /sys/fs/cgroup/15m-lab-*; do
   done
 done
 while read -r name _; do
-  [[ "$name" == 15m-ports-* || "$name" == 15m-anyip-* ]] || continue
+  [[ "$name" == 15m-ports || "$name" == 15m-ports-* || "$name" == 15m-anyip-* ]] || continue
   ip netns del "$name" 2>/dev/null || true
 done < <(ip netns list)
 
@@ -32,4 +32,5 @@ mkdir -p /var/lib/15m-lab/runs
 rm -rf /var/lib/15m-lab/hints
 printf 'LISTENERS=1000\n' > /etc/15m-lab/runtime.env
 rm -f /tmp/15m-baseline.port
+rm -f /tmp/15m-port.json
 echo "Lab services and network state reset; prior reports are in /var/lib/15m-lab/archive."

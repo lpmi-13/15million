@@ -13,10 +13,11 @@ RUN set -eu; \
     apt-get update; \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       ca-certificates curl gcc iproute2 iputils-ping jq make procps \
-      python3 strace sudo; \
+      python3 rustc strace sudo; \
     rm -rf /var/lib/apt/lists/*
 
 COPY baseline /opt/15m-lab/baseline
+COPY learning /opt/15m-lab/learning
 COPY runtime /opt/15m-lab/runtime
 COPY toolbox /opt/15m-lab/toolbox
 COPY tasks /opt/15m-lab/tasks
@@ -42,6 +43,9 @@ RUN set -eu; \
     if id laborant >/dev/null 2>&1; then \
       ln -sfn /opt/15m-lab /home/laborant/15m-lab; \
       chown -h laborant:laborant /home/laborant/15m-lab; \
+      install -d -m 0755 -o laborant -g laborant /home/laborant/15m-work; \
+      install -m 0644 -o laborant -g laborant /opt/15m-lab/learning/server.c /home/laborant/15m-work/server.c; \
+      install -m 0644 -o laborant -g laborant /opt/15m-lab/learning/context.rs /home/laborant/15m-work/context.rs; \
     fi; \
     test -x /opt/15m-lab/bin/million-listeners; \
     test -x /opt/15m-lab/baseline/bin/port_exhaust; \

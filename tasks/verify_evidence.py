@@ -27,6 +27,8 @@ def port() -> str:
     try:
         probe = json.loads(path.read_text())
         width = probe["range_high"] - probe["range_low"] + 1
+        if probe["maximum"] != 15000000:
+            raise CheckFailed("Run the C loop with 15000000 as its upper bound.")
         if probe["failed_syscall"] != "listen" or probe["errno"] != 98:
             raise CheckFailed("The C loop must stop at listen() with EADDRINUSE (errno 98).")
         if not width - 64 <= probe["count"] <= width:
@@ -73,6 +75,8 @@ def bounded(kind: str) -> str:
             raise CheckFailed("The command did not use the tutorial's memory limit.")
         if kind == "socket" and report["slab_peak_observed"] <= 0:
             raise CheckFailed("The socket run has no kernel slab observation.")
+        if kind == "socket" and report["requested_count"] != 10000000:
+            raise CheckFailed("Run the C socket loop with 10000000 as its upper bound.")
     except (ValueError, KeyError, TypeError) as error:
         raise CheckFailed(f"{path} has an invalid report ({error}).") from None
     return (f"The {kind} command reached {report['observed_count']} entries and "

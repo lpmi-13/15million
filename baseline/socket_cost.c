@@ -7,18 +7,30 @@
 #include <unistd.h>
 
 int main(int argc, char **argv) {
-    size_t maximum = argc == 2 ? strtoull(argv[1], NULL, 10) : 200000;
-    if (maximum == 0 || maximum > 200000) return 2;
+    char *end = NULL;
+    unsigned long long requested = argc == 2 ? strtoull(argv[1], &end, 10) : 0;
+    if (argc != 2 || !end || *end || requested < 1 || requested > 10000000) {
+        fprintf(stderr, "usage: socket_cost MAX_SOCKETS (1..10000000)\n");
+        return 2;
+    }
+    const size_t capacity = 200000;
     struct rlimit limit;
     if (getrlimit(RLIMIT_NOFILE, &limit) < 0) { perror("getrlimit"); return 1; }
-    rlim_t needed = maximum + 32;
+    rlim_t needed = capacity + 32;
     limit.rlim_cur = limit.rlim_max < needed ? limit.rlim_max : needed;
     if (setrlimit(RLIMIT_NOFILE, &limit) < 0) { perror("setrlimit"); return 1; }
-    int *fds = calloc(maximum, sizeof(int));
+    int *fds = calloc(capacity, sizeof(int));
     if (!fds) { perror("calloc"); return 1; }
     size_t count = 0;
     int error = 0;
-    while (count < maximum) {
+    printf("target=%llu\n", requested);
+    fflush(stdout);
+    while (count < requested) {
+        if (count == capacity) {
+            fprintf(stderr, "the descriptor array filled before memory ran out\n");
+            error = EMFILE;
+            break;
+        }
         int fd = socket(AF_INET, SOCK_STREAM, 0); /* deliberately unbound */
         if (fd < 0) { error = errno; break; }
         fds[count++] = fd;
