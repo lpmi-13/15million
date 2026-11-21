@@ -1,0 +1,28 @@
+{
+  "bytes_per_socket_estimate": 3728.2702222222224,
+  "cgroup_limit": 67108864,
+  "events": {
+    "high": 0,
+    "low": 0,
+    "max": 35,
+    "oom": 1,
+    "oom_group_kill": 0,
+    "oom_kill": 1
+  },
+  "exit_code": -9,
+  "kind": "socket",
+  "max_observed_count": 18000,
+  "memory_peak": 67108864,
+  "ok": true,
+  "output_tail": [
+    "count=14000",
+    "count=15000",
+    "count=16000",
+    "count=17000",
+    "count=18000"
+  ],
+  "run_id": "preflight-failures",
+  "schema": 1,
+  "slab_peak_observed": 64413400,
+  "unix_time": 1795253631.0475266
+}

@@ -1,0 +1,14 @@
+[Unit]
+Description=Private route to 15m lab listeners
+ConditionHost=client-01
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/15m-lab/toolbox/network_client.sh setup
+ExecStop=/opt/15m-lab/toolbox/network_client.sh teardown
+
+[Install]
+WantedBy=multi-user.target

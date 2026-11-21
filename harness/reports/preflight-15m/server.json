@@ -1,0 +1,21 @@
+{
+  "accepted": 10,
+  "backend": "tun",
+  "base": "10.0.0.1",
+  "cgroup": {
+    "memory_current": "9378844672",
+    "memory_events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+    "memory_max": "9663676416",
+    "memory_peak": "9379106816",
+    "vm_mem_available_kib": 791612
+  },
+  "initialized": 15000000,
+  "last": "10.228.225.192",
+  "listener_bytes": 32,
+  "pid": 1304,
+  "port": 8080,
+  "ready": true,
+  "requested": 15000000,
+  "startup_ms": 6406,
+  "task_bytes": 16
+}

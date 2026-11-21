@@ -1,0 +1,1 @@
+laborant ALL=(root) NOPASSWD: /opt/15m-lab/toolbox/runtime.sh *, /opt/15m-lab/toolbox/reset.sh, /usr/bin/python3 /opt/15m-lab/toolbox/experiment.py *

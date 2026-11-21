@@ -1,0 +1,14 @@
+[Unit]
+Description=Read-only 15m runtime status over the lab private link
+ConditionHost=dev-01
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/15m-lab/toolbox/status_bridge.py
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

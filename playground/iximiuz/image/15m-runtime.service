@@ -1,0 +1,16 @@
+[Unit]
+Description=15 million smoltcp HTTP listeners
+Requires=15m-network-server.service
+After=15m-network-server.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/15m-lab/runtime.env
+ExecStart=/opt/15m-lab/bin/million-listeners --base 10.0.0.1 --count ${LISTENERS} --backend tun --device smolbench --status-socket /run/15m-lab/status.sock
+Restart=no
+MemoryMax=9G
+OOMPolicy=stop
+RuntimeDirectory=15m-lab
+TimeoutStopSec=20
+KillSignal=SIGTERM
+

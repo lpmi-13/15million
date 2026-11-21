@@ -1,0 +1,170 @@
+{
+  "version": "0.1.116",
+  "agents": [
+    "claude",
+    "codex",
+    "cursor"
+  ],
+  "bundles": [
+    "playgrounds",
+    "authoring"
+  ],
+  "files": {
+    ".agents/rules/labctl-challenge-authoring.md": {
+      "bundle": "authoring",
+      "sha256": "e6d0d316d2e060dbcefcde72dd73bb3b5788434e91251e49102005727654627f"
+    },
+    ".agents/rules/labctl-challenge-format-docs.md": {
+      "bundle": "authoring",
+      "sha256": "1a0882f55726254de05e42c90f55792da8c823c72fae55cd6fce5f91104c6c11"
+    },
+    ".agents/rules/labctl-general-style-guides.md": {
+      "bundle": "authoring",
+      "sha256": "ff74b5224309f5cc8f8a0bf83665f75817d7b0624cc3ad7922dddd6c0dd49e4d"
+    },
+    ".agents/rules/labctl-iximiuz-labs.md": {
+      "bundle": "authoring",
+      "sha256": "67174a529a3b99d2cf245598452cc822bc92e1a5e578229175a906a1631dce28"
+    },
+    ".agents/rules/labctl-shell-gym-authoring.md": {
+      "bundle": "authoring",
+      "sha256": "0e1902e41307f69de22f44df20eb744ee272fe813242c36d77104089b081aa01"
+    },
+    ".agents/rules/labctl-shell-gym-format-docs.md": {
+      "bundle": "authoring",
+      "sha256": "c45c9afe9f2cb2639d04df72866b3c1bbe5ddd4c40fbf17c6cc4537c552be035"
+    },
+    ".agents/rules/labctl-skill-path-format-docs.md": {
+      "bundle": "authoring",
+      "sha256": "aba049457b817f0d84116e9eb6dc57c3d9342a252f195ec27c16e4f4c5e16f69"
+    },
+    ".agents/rules/labctl-tutorial-format-docs.md": {
+      "bundle": "authoring",
+      "sha256": "9114173920bd98824e2bf6255c977ba5cc36dd9cb56d49f64ac3a0ddf601d464"
+    },
+    ".agents/skills/labs-content/SKILL.md": {
+      "bundle": "authoring",
+      "sha256": "d9378f1f12857ef53035ecbd483bceecde3e687e7b413051c42db6ae6825f8e5"
+    },
+    ".agents/skills/labs-debug-challenge/SKILL.md": {
+      "bundle": "authoring",
+      "sha256": "b5592ece6e9601b0f1993e8fff4eb41ee95b8a07426e011775391dc3a60db57a"
+    },
+    ".agents/skills/labs-edit-shell-gym/SKILL.md": {
+      "bundle": "authoring",
+      "sha256": "8a2da216073cf23a29440eb9ee8349c5c7acc74d07208e31c3c42f1932e4604f"
+    },
+    ".agents/skills/labs-playground-tasks/SKILL.md": {
+      "bundle": "playgrounds",
+      "sha256": "dc2945ce17a6b07d7c5e697628353ea74c8d33ef085c27d667f92a7298f2f663"
+    },
+    ".agents/skills/labs-playgrounds/SKILL.md": {
+      "bundle": "playgrounds",
+      "sha256": "b70d7c8b18d9cd6d5b4bef593afee9513363d9957d010512a943910a60c05501"
+    },
+    ".agents/skills/labs-review-challenge/SKILL.md": {
+      "bundle": "authoring",
+      "sha256": "7dd153296301cc062ded6aa03ae96376bcdda5da8117e69bbf5fcfea9c1b90f8"
+    },
+    ".agents/skills/labs-review-shell-gym/SKILL.md": {
+      "bundle": "authoring",
+      "sha256": "d26aecfe0d76ffd3e902b606ff678dc318c6cafdb24a94a4affd220a16253993"
+    },
+    ".claude/rules/labctl/challenge-authoring.md": {
+      "bundle": "authoring",
+      "sha256": "141305d59bafd2edcf405e5a6b32ef32dc9c0d4e407e21d84fadaef54f0243a9"
+    },
+    ".claude/rules/labctl/challenge-format-docs.md": {
+      "bundle": "authoring",
+      "sha256": "52731822bc1764d24a71acbc63113be54f9de01aabf8239d55d20bb11a3654da"
+    },
+    ".claude/rules/labctl/general-style-guides.md": {
+      "bundle": "authoring",
+      "sha256": "bf0fe1bc7583787151c68a22a37f38d075a480ee4e91389edb10a85b83651541"
+    },
+    ".claude/rules/labctl/iximiuz-labs.md": {
+      "bundle": "authoring",
+      "sha256": "cb641c49901b9b489144059093fc0449f89d054445d6542f130c24633196869d"
+    },
+    ".claude/rules/labctl/shell-gym-authoring.md": {
+      "bundle": "authoring",
+      "sha256": "e9324e9903f71ec21bbf865b3553328d9d7db18d6ed87af8fd50b0633c5722ec"
+    },
+    ".claude/rules/labctl/shell-gym-format-docs.md": {
+      "bundle": "authoring",
+      "sha256": "618a4942c46ebdb0f886d9200689a46c7690f762d93ab31e71023f10c1789dff"
+    },
+    ".claude/rules/labctl/skill-path-format-docs.md": {
+      "bundle": "authoring",
+      "sha256": "57d6b1b22472553c2f17f13dead9f3fd070bff899efe6996c3ad9f3342e1d548"
+    },
+    ".claude/rules/labctl/tutorial-format-docs.md": {
+      "bundle": "authoring",
+      "sha256": "72d2043392cac80df5610d3eb59ccb7104a3b8b424126ca27f94f2a0d1c83449"
+    },
+    ".claude/skills/labs-content/SKILL.md": {
+      "bundle": "authoring",
+      "sha256": "d9378f1f12857ef53035ecbd483bceecde3e687e7b413051c42db6ae6825f8e5"
+    },
+    ".claude/skills/labs-debug-challenge/SKILL.md": {
+      "bundle": "authoring",
+      "sha256": "b5592ece6e9601b0f1993e8fff4eb41ee95b8a07426e011775391dc3a60db57a"
+    },
+    ".claude/skills/labs-edit-shell-gym/SKILL.md": {
+      "bundle": "authoring",
+      "sha256": "8a2da216073cf23a29440eb9ee8349c5c7acc74d07208e31c3c42f1932e4604f"
+    },
+    ".claude/skills/labs-playground-tasks/SKILL.md": {
+      "bundle": "playgrounds",
+      "sha256": "dc2945ce17a6b07d7c5e697628353ea74c8d33ef085c27d667f92a7298f2f663"
+    },
+    ".claude/skills/labs-playgrounds/SKILL.md": {
+      "bundle": "playgrounds",
+      "sha256": "b70d7c8b18d9cd6d5b4bef593afee9513363d9957d010512a943910a60c05501"
+    },
+    ".claude/skills/labs-review-challenge/SKILL.md": {
+      "bundle": "authoring",
+      "sha256": "7dd153296301cc062ded6aa03ae96376bcdda5da8117e69bbf5fcfea9c1b90f8"
+    },
+    ".claude/skills/labs-review-shell-gym/SKILL.md": {
+      "bundle": "authoring",
+      "sha256": "d26aecfe0d76ffd3e902b606ff678dc318c6cafdb24a94a4affd220a16253993"
+    },
+    ".cursor/rules/labctl/challenge-authoring.mdc": {
+      "bundle": "authoring",
+      "sha256": "4e6b7bf97e812b19bc1305ec85b84d2e144444ca1ae972be1568c8aa3510300b"
+    },
+    ".cursor/rules/labctl/challenge-format-docs.mdc": {
+      "bundle": "authoring",
+      "sha256": "6d285a63f59aa3d5aabe9e5f70020c6cff3995bfbcf35593569c92d892dea1ac"
+    },
+    ".cursor/rules/labctl/general-style-guides.mdc": {
+      "bundle": "authoring",
+      "sha256": "b981dfd3e2b63fe454103e3e945dcf23793940a099547c63feaaf5822d77b6d5"
+    },
+    ".cursor/rules/labctl/iximiuz-labs.mdc": {
+      "bundle": "authoring",
+      "sha256": "1588bc35d0202698b49eb17bbc6924ec6518786ae802233b8260d144cf96234a"
+    },
+    ".cursor/rules/labctl/shell-gym-authoring.mdc": {
+      "bundle": "authoring",
+      "sha256": "6aa0390f2fcd0442d8a6cc389f3bfceb8d1baff01ff0bafef54bfb92b06eb211"
+    },
+    ".cursor/rules/labctl/shell-gym-format-docs.mdc": {
+      "bundle": "authoring",
+      "sha256": "2050c04c92e8e1600c947efc6b4bac5de98259880bea74e5bec6bf05eb666a79"
+    },
+    ".cursor/rules/labctl/skill-path-format-docs.mdc": {
+      "bundle": "authoring",
+      "sha256": "29557cb5731e7b9aef23c5ba710cb95cd006ec5d66443e74ce70c2f64e41f9fa"
+    },
+    ".cursor/rules/labctl/tutorial-format-docs.mdc": {
+      "bundle": "authoring",
+      "sha256": "8c4868669a0a592f738c255e5d5f75e764aa5025f1688806281f2c95270130ef"
+    },
+    "AGENTS.md#authoring": {
+      "bundle": "authoring",
+      "sha256": "49d40817398cf6cd55b46a1970e88ae55572de362cb84444669495207365fe90"
+    }
+  }
+}

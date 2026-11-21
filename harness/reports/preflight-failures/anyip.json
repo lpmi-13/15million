@@ -1,0 +1,13 @@
+{
+  "ipv6_nonlocal_bind_in_namespace": true,
+  "kind": "anyip",
+  "ok": true,
+  "replies": {
+    "2001:db8:1234:5678::1": "alpha",
+    "2001:db8:1234:5678::2": "beta"
+  },
+  "route": "2001:db8:1234:5678::/64",
+  "run_id": "preflight-failures",
+  "schema": 1,
+  "unix_time": 1795253576.6046422
+}

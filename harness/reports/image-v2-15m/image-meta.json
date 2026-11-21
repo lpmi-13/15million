@@ -1,0 +1,7 @@
+{
+  "image_digest": "sha256:dcabae2df3f80d0d97b27bc1854e623b92e4a1d006bf209fe9c8599840bd72c9",
+  "image_id": "sha256:77eaf4e5b0a3e738a1bc354a2385c87a16d93f8dc13613bfbd95c49a6b8814fd",
+  "image_ref": "ghcr.io/lpmi-13/15million-rootfs:v2",
+  "playground_id": "6b01c5f61bf49ab62d635a63",
+  "runtime_sha256": "340b9cfc26083d8955250b4d15d54fecbf457abfd4053d122dda9b7103b908c8"
+}

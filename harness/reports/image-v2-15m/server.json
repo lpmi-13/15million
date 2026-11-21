@@ -1,0 +1,27 @@
+{
+  "accepted": 22,
+  "backend": "tun",
+  "base": "10.0.0.1",
+  "cgroup": {
+    "exe": "/opt/15m-lab/bin/million-listeners",
+    "exe_sha256": "340b9cfc26083d8955250b4d15d54fecbf457abfd4053d122dda9b7103b908c8",
+    "memory_current": "9258627072",
+    "memory_events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+    "memory_max": "9663676416",
+    "memory_peak": "9259130880",
+    "path": "/sys/fs/cgroup/system.slice/15m-runtime.service",
+    "pss_bytes": 9240787968,
+    "rss_bytes": 9242435584,
+    "vm_mem_available_kib": 905520,
+    "vm_mem_total_kib": 10264988
+  },
+  "initialized": 15000000,
+  "last": "10.228.225.192",
+  "listener_bytes": 24,
+  "pid": 1449,
+  "port": 8080,
+  "ready": true,
+  "requested": 15000000,
+  "startup_ms": 13180,
+  "task_bytes": 16
+}

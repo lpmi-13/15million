@@ -1,0 +1,9 @@
+.git
+.agents
+.aws
+.codex
+harness/reports
+runtime/target
+baseline/bin
+__pycache__
+*.pyc

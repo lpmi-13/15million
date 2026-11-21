@@ -1,0 +1,48 @@
+kind: playground
+name: flexbox
+playground:
+  networks:
+    - name: local
+      subnet: 172.16.0.0/24
+  machines:
+    - name: dev-01
+      users:
+        - name: root
+        - name: laborant
+          default: true
+      drives:
+        - source: ubuntu-24-04
+          mount: /
+          size: 20GiB
+      network:
+        interfaces:
+          - network: local
+            address: 172.16.0.2/24
+      resources:
+        cpuCount: 4
+        ramSize: 10GiB
+    - name: client-01
+      users:
+        - name: root
+        - name: laborant
+          default: true
+      drives:
+        - source: ubuntu-24-04
+          mount: /
+          size: 10GiB
+      network:
+        interfaces:
+          - network: local
+            address: 172.16.0.3/24
+      resources:
+        cpuCount: 2
+        ramSize: 2GiB
+  tabs:
+    - id: terminal-dev-01
+      kind: terminal
+      name: Server
+      machine: dev-01
+    - id: terminal-client-01
+      kind: terminal
+      name: Client
+      machine: client-01

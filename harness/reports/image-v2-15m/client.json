@@ -1,0 +1,126 @@
+{
+  "after": {
+    "accepted": 10,
+    "backend": "tun",
+    "base": "10.0.0.1",
+    "cgroup": {
+      "exe": "/opt/15m-lab/bin/million-listeners",
+      "exe_sha256": "340b9cfc26083d8955250b4d15d54fecbf457abfd4053d122dda9b7103b908c8",
+      "memory_current": "9258868736",
+      "memory_events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "memory_max": "9663676416",
+      "memory_peak": "9258868736",
+      "path": "/sys/fs/cgroup/system.slice/15m-runtime.service",
+      "pss_bytes": 9240793088,
+      "rss_bytes": 9242423296,
+      "vm_mem_available_kib": 905768,
+      "vm_mem_total_kib": 10264988
+    },
+    "initialized": 15000000,
+    "last": "10.228.225.192",
+    "listener_bytes": 24,
+    "pid": 1449,
+    "port": 8080,
+    "ready": true,
+    "requested": 15000000,
+    "startup_ms": 13180,
+    "task_bytes": 16
+  },
+  "before": {
+    "accepted": 0,
+    "backend": "tun",
+    "base": "10.0.0.1",
+    "cgroup": {
+      "exe": "/opt/15m-lab/bin/million-listeners",
+      "exe_sha256": "340b9cfc26083d8955250b4d15d54fecbf457abfd4053d122dda9b7103b908c8",
+      "memory_current": "9258348544",
+      "memory_events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+      "memory_max": "9663676416",
+      "memory_peak": "9258868736",
+      "path": "/sys/fs/cgroup/system.slice/15m-runtime.service",
+      "pss_bytes": 9240784896,
+      "rss_bytes": 9242415104,
+      "vm_mem_available_kib": 905992,
+      "vm_mem_total_kib": 10264988
+    },
+    "initialized": 15000000,
+    "last": "10.228.225.192",
+    "listener_bytes": 24,
+    "pid": 1449,
+    "port": 8080,
+    "ready": true,
+    "requested": 15000000,
+    "startup_ms": 13180,
+    "task_bytes": 16
+  },
+  "count": 15000000,
+  "ok": true,
+  "outside": {
+    "error": "[Errno 111] Connection refused",
+    "ip": "10.228.225.193"
+  },
+  "sample": [
+    {
+      "body": "1",
+      "index": 0,
+      "ip": "10.0.0.1",
+      "latency_ms": 2.293
+    },
+    {
+      "body": "870436",
+      "index": 870435,
+      "ip": "10.13.72.36",
+      "latency_ms": 2.142
+    },
+    {
+      "body": "1055741",
+      "index": 1055740,
+      "ip": "10.16.27.253",
+      "latency_ms": 2.156
+    },
+    {
+      "body": "3091498",
+      "index": 3091497,
+      "ip": "10.47.44.42",
+      "latency_ms": 2.162
+    },
+    {
+      "body": "6378908",
+      "index": 6378907,
+      "ip": "10.97.85.156",
+      "latency_ms": 2.183
+    },
+    {
+      "body": "7500000",
+      "index": 7499999,
+      "ip": "10.114.112.224",
+      "latency_ms": 2.183
+    },
+    {
+      "body": "9521278",
+      "index": 9521277,
+      "ip": "10.145.72.126",
+      "latency_ms": 2.153
+    },
+    {
+      "body": "15000000",
+      "index": 14999999,
+      "ip": "10.228.225.192",
+      "latency_ms": 2.138
+    },
+    {
+      "body": "1",
+      "index": 0,
+      "ip": "10.0.0.1",
+      "latency_ms": 2.112
+    },
+    {
+      "body": "15000000",
+      "index": 14999999,
+      "ip": "10.228.225.192",
+      "latency_ms": 2.144
+    }
+  ],
+  "schema": 1,
+  "unix_time": 1795278432.7830644
+}

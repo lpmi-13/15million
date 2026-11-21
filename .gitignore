@@ -1,0 +1,10 @@
+runtime/target/
+baseline/bin/
+__pycache__/
+*.pyc
+*.tmp
+
+AGENTS.md
+.agents
+.cursor
+.claude

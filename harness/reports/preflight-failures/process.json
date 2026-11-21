@@ -1,0 +1,24 @@
+{
+  "before": 0,
+  "bytes_per_process_estimate": 160547.52153110047,
+  "cgroup_limit": 33554432,
+  "children_started": 210,
+  "events": {
+    "high": 0,
+    "low": 0,
+    "max": 60,
+    "oom": 3,
+    "oom_group_kill": 0,
+    "oom_kill": 1
+  },
+  "extrapolated_15m_bytes": 2408212822966,
+  "first_ten_pss_bytes": 1738752,
+  "kind": "process",
+  "memory_peak": 33554432,
+  "ok": true,
+  "peak_live": 209,
+  "run_id": "preflight-failures",
+  "schema": 1,
+  "termination": "cgroup_oom_kill",
+  "unix_time": 1795253625.3581953
+}

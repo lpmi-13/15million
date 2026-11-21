@@ -1,0 +1,20 @@
+[package]
+name = "million-listeners"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[features]
+default = ["tun"]
+tun = []
+tap = []
+
+[dependencies]
+libc = "=0.2.177"
+smoltcp = { version = "=0.14.0", default-features = false, features = ["std", "medium-ip", "medium-ethernet", "phy-tuntap_interface", "proto-ipv4", "socket-tcp"] }
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+panic = "abort"
+
