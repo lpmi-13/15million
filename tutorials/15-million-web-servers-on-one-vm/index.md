@@ -4,7 +4,7 @@ kind: tutorial
 title: Can One VM Host 15 Million Web Servers?
 
 description: |
-  Based on the article "15 million web servers on one VM" (kapteko.com).
+  All credit to the original article "15 million web servers on one VM" (kapteko.com).
   Measure the Linux limits that stop a naive 15-million-listener HTTP setup: ephemeral ports,
   per-process memory, and idle kernel sockets. Then run 15,000,000 smoltcp listeners in one
   user-space process and probe them from a second VM. The final step needs a 10 GiB server VM.
@@ -93,12 +93,10 @@ you get to the last step, you won't be able to run the full 15 million web serve
 On a 4 GiB server VM, steps 1 to 5 and the 1,000,000-listener run still work, but the kernel kills the 15,000,000-listener run after about 5 million listeners.
 ::
 
-Can one 10 GiB VM answer HTTP on **15,000,000 destination IP addresses**
-[15 million web servers on one VM](https://kapteko.com/15-million-webservers/) is a very cool article, and I wanted to have a
-one-click environment to play through it (just since some of the commands are very low level and I didn't wanna risk
-borking my own system).
+This is **not** my original work; all credit goes to the author of [15 million web servers on one VM](https://kapteko.com/15-million-webservers/), a very cool article that I wanted to have a one-click environment to play through
+(just since some of the commands are very low level and I didn't wanna risk borking my own system).
 
-So this is a tutorial to "play along" with as you read the article (which is a *must read*, since it gives way more context and background details about what's going on with the networking stack).
+This is a tutorial to "play along" with as you read the article (which is an absolute *must read*, since it gives way more context and background details about what's going on with the networking stack).
 
 First, you hit three Linux resource limits with small, bounded probes.
 Then you start a compact Rust runtime that holds 15 million listeners in one process, and you check it from a separate client VM.
