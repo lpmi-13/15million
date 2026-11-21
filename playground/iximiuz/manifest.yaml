@@ -78,8 +78,8 @@ playground:
         /opt/15m-lab/tasks/wait_ready.sh client
   accessControl:
     canList:
-      - owner
+      - anyone
     canRead:
-      - owner
+      - anyone
     canStart:
-      - owner
+      - anyone
