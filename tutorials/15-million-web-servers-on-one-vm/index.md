@@ -88,14 +88,18 @@ tasks:
 kind: warning
 ---
 
-**This tutorial only runs successfully in the premium tier.**
-The last step needs the full playground, with a 10 GiB server VM.
-Free-tier playgrounds start with smaller VMs.
+The full tutorial only runs successfully in the premium tier. You can still work through the super cool article, but when
+you get to the last step, you won't be able to run the full 15 million web servers in the 4GB VM.
 On a 4 GiB server VM, steps 1 to 5 and the 1,000,000-listener run still work, but the kernel kills the 15,000,000-listener run after about 5 million listeners.
 ::
 
-Can one 10 GiB VM answer HTTP on **15,000,000 destination IP addresses**?
-This tutorial repeats the experiments from [15 million web servers on one VM](https://kapteko.com/15-million-webservers/) in a two-VM playground.
+Can one 10 GiB VM answer HTTP on **15,000,000 destination IP addresses**
+[15 million web servers on one VM](https://kapteko.com/15-million-webservers/) is a very cool article, and I wanted to have a
+one-click environment to play through it (just since some of the commands are very low level and I didn't wanna risk
+borking my own system).
+
+So this is a tutorial to "play along" with as you read the article (which is a *must read*, since it gives way more context and background details about what's going on with the networking stack).
+
 First, you hit three Linux resource limits with small, bounded probes.
 Then you start a compact Rust runtime that holds 15 million listeners in one process, and you check it from a separate client VM.
 
