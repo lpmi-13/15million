@@ -25,6 +25,7 @@ if [[ -d /var/lib/15m-lab/runs ]] && [[ -n "$(ls -A /var/lib/15m-lab/runs)" ]]; 
   mv /var/lib/15m-lab/runs "/var/lib/15m-lab/archive/reset-$(date +%s)"
 fi
 mkdir -p /var/lib/15m-lab/runs
+rm -rf /var/lib/15m-lab/hints
 printf 'LISTENERS=1000\n' > /etc/15m-lab/runtime.env
 rm -f /tmp/15m-baseline.port
 echo "Lab services and network state reset; prior reports are in /var/lib/15m-lab/archive."

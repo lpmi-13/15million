@@ -38,6 +38,8 @@ def atomic_json(path: Path, data: dict) -> None:
         json.dump(data, temporary, indent=2, sort_keys=True)
         temporary.write("\n")
         name = temporary.name
+    # NamedTemporaryFile creates 0600 files. Reports must stay readable by the learner.
+    os.chmod(name, 0o644)
     os.replace(name, path)
 
 

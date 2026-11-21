@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Run after a versioned rootfs image is pushed and its owner-only playground starts.
+# Run after a versioned rootfs image is pushed and a playground that boots it has started.
 set -euo pipefail
 
 run_id="${1:?usage: remote_image_test.sh PLAYGROUND_RUN_ID}"
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 report="$root/harness/reports/image-15m"
-rootfs_image="${ROOTFS_IMAGE:-ghcr.io/lpmi-13/15million-rootfs:v1}"
+rootfs_image="${ROOTFS_IMAGE:-ghcr.io/lpmi-13/15million-rootfs:v4}"
 image_id="$(docker image inspect "$rootfs_image" --format '{{.Id}}')"
 image_digest="$(docker buildx imagetools inspect "$rootfs_image" --format '{{.Manifest.Digest}}')"
 [[ "$image_digest" == sha256:* ]] || { echo "Could not resolve the pushed image digest." >&2; exit 1; }

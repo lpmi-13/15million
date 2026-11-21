@@ -3,10 +3,10 @@
   "ok": true,
   "results": [
     {
-      "body": "2142858",
-      "index": 2142857,
-      "ip": "10.32.178.138",
-      "latency_ms": 1.2,
+      "body": "8571429",
+      "index": 8571428,
+      "ip": "10.130.202.37",
+      "latency_ms": 1.304,
       "ok": true,
       "status": 200
     },
@@ -14,7 +14,7 @@
       "body": "1",
       "index": 0,
       "ip": "10.0.0.1",
-      "latency_ms": 2.102,
+      "latency_ms": 2.381,
       "ok": true,
       "status": 200
     },
@@ -22,39 +22,15 @@
       "body": "4285715",
       "index": 4285714,
       "ip": "10.65.101.19",
-      "latency_ms": 1.99,
+      "latency_ms": 1.613,
       "ok": true,
       "status": 200
     },
     {
-      "body": "10714286",
-      "index": 10714285,
-      "ip": "10.163.124.174",
-      "latency_ms": 1.697,
-      "ok": true,
-      "status": 200
-    },
-    {
-      "body": "1",
-      "index": 0,
-      "ip": "10.0.0.1",
-      "latency_ms": 1.393,
-      "ok": true,
-      "status": 200
-    },
-    {
-      "body": "8571429",
-      "index": 8571428,
-      "ip": "10.130.202.37",
-      "latency_ms": 1.923,
-      "ok": true,
-      "status": 200
-    },
-    {
-      "body": "12857143",
-      "index": 12857142,
-      "ip": "10.196.47.55",
-      "latency_ms": 1.894,
+      "body": "2142858",
+      "index": 2142857,
+      "ip": "10.32.178.138",
+      "latency_ms": 1.698,
       "ok": true,
       "status": 200
     },
@@ -62,7 +38,23 @@
       "body": "6428572",
       "index": 6428571,
       "ip": "10.98.23.156",
-      "latency_ms": 2.197,
+      "latency_ms": 1.549,
+      "ok": true,
+      "status": 200
+    },
+    {
+      "body": "10714286",
+      "index": 10714285,
+      "ip": "10.163.124.174",
+      "latency_ms": 2.504,
+      "ok": true,
+      "status": 200
+    },
+    {
+      "body": "1",
+      "index": 0,
+      "ip": "10.0.0.1",
+      "latency_ms": 2.141,
       "ok": true,
       "status": 200
     },
@@ -70,7 +62,7 @@
       "body": "15000000",
       "index": 14999999,
       "ip": "10.228.225.192",
-      "latency_ms": 1.83,
+      "latency_ms": 2.474,
       "ok": true,
       "status": 200
     },
@@ -78,7 +70,15 @@
       "body": "1",
       "index": 0,
       "ip": "10.0.0.1",
-      "latency_ms": 2.147,
+      "latency_ms": 2.28,
+      "ok": true,
+      "status": 200
+    },
+    {
+      "body": "12857143",
+      "index": 12857142,
+      "ip": "10.196.47.55",
+      "latency_ms": 2.58,
       "ok": true,
       "status": 200
     },
@@ -86,7 +86,7 @@
       "body": "1",
       "index": 0,
       "ip": "10.0.0.1",
-      "latency_ms": 2.008,
+      "latency_ms": 2.401,
       "ok": true,
       "status": 200
     },
@@ -94,7 +94,7 @@
       "body": "1",
       "index": 0,
       "ip": "10.0.0.1",
-      "latency_ms": 2.074,
+      "latency_ms": 2.205,
       "ok": true,
       "status": 200
     }

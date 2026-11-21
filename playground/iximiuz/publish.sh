@@ -2,11 +2,12 @@
 # Publish only after a clean rootfs integration run and owner authorization.
 set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+tutorial_dir="$root/tutorials/15-million-web-servers-on-one-vm"
 [[ "${CONFIRM_PUBLISH:-}" == 1 ]] || { echo "Set CONFIRM_PUBLISH=1 after approving publication." >&2; exit 2; }
-[[ -n "${PLAYGROUND_NAME:-}" && -n "${CHALLENGE_NAME:-}" && -n "${ROOTFS_IMAGE:-}" ]] || {
-  echo "Set PLAYGROUND_NAME, CHALLENGE_NAME and a versioned ROOTFS_IMAGE." >&2; exit 2;
+[[ -n "${PLAYGROUND_NAME:-}" && -n "${TUTORIAL_NAME:-}" && -n "${ROOTFS_IMAGE:-}" ]] || {
+  echo "Set PLAYGROUND_NAME, TUTORIAL_NAME and a versioned ROOTFS_IMAGE." >&2; exit 2;
 }
-[[ "$PLAYGROUND_NAME" =~ ^[a-z0-9][a-z0-9-]*$ && "$CHALLENGE_NAME" =~ ^[a-z0-9][a-z0-9-]*$ ]] || {
+[[ "$PLAYGROUND_NAME" =~ ^[a-z0-9][a-z0-9-]*$ && "$TUTORIAL_NAME" =~ ^[a-z0-9][a-z0-9-]*$ ]] || {
   echo "Registered names must be lowercase slugs." >&2; exit 2;
 }
 [[ "$ROOTFS_IMAGE" =~ ^ghcr\.io/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+:v[1-9][0-9]*$ ]] || {
@@ -39,32 +40,41 @@ current_sha="${current_sha%% *}"
   echo "The local rootfs binary differs from the exact-image test report." >&2; exit 2;
 }
 stage="$(mktemp -d)"
-trap 'rm -rf "$stage"' EXIT
-python3 - "$root" "$stage" "$PLAYGROUND_NAME" "$ROOTFS_IMAGE" <<'PY'
+scaffold="$(mktemp -d)"
+trap 'rm -rf "$stage" "$scaffold"' EXIT
+python3 - "$root" "$tutorial_dir" "$stage" "$PLAYGROUND_NAME" "$ROOTFS_IMAGE" "$registry_digest" <<'PY'
 from pathlib import Path
 import re
+import shutil
 import sys
 
-root, stage, playground, image = sys.argv[1:]
-root, stage = Path(root), Path(stage)
+root, tutorial, stage, playground, image, digest = sys.argv[1:]
+root, tutorial, stage = Path(root), Path(tutorial), Path(stage)
 manifest = (root / "playground/iximiuz/manifest.yaml").read_text()
 if not re.search(rf"(?m)^name: {re.escape(playground)}$", manifest):
     raise SystemExit("Local manifest does not name the registered playground.")
-if manifest.count(f"oci://{image}") != 2:
-    raise SystemExit("Local manifest must reference the tested image for both VMs.")
+# Both VMs must boot the tested image. The registered playground failed to start with
+# tag@sha256 drive sources (2026-11-21), so the manifest uses the tag, and the digest
+# check above ties that tag to the tested image.
+sources = re.findall(r"(?m)^\s*- source: (oci://\S+)$", manifest)
+allowed = {f"oci://{image}", f"oci://{image}@{digest}"}
+if len(sources) != 2 or not set(sources) <= allowed:
+    raise SystemExit(f"Local manifest drives {sources} do not reference the tested image.")
 (stage / "manifest.yaml").write_text(manifest)
-index = (root / "index.md").read_text()
+index = (tutorial / "index.md").read_text()
 if not re.search(rf"(?m)^  name: {re.escape(playground)}$", index):
-    raise SystemExit("Local challenge does not reference the registered playground.")
+    raise SystemExit("Local tutorial does not reference the registered playground.")
 (stage / "index.md").write_text(index)
-(stage / "solution.md").write_text((root / "solution.md").read_text())
+(stage / "__static__").mkdir()
+shutil.copy2(tutorial / "__static__/cover.png", stage / "__static__/cover.png")
 PY
 labctl playground update "$PLAYGROUND_NAME" -f "$stage/manifest.yaml"
 rm "$stage/manifest.yaml"
 if [[ "${CONTENT_CREATE:-0}" == 1 ]]; then
-  created_name="$(labctl content create challenge "$CHALLENGE_NAME" --dir "$stage" --no-open -q)"
-  labctl content push challenge "$created_name" --dir "$stage" --force
-  echo "Created challenge: $created_name"
+  # Create in a scratch folder so the scaffold cannot replace the staged files.
+  created_name="$(labctl content create tutorial "$TUTORIAL_NAME" --dir "$scaffold" --no-open -q)"
+  labctl content push tutorial "$created_name" --dir "$stage" --force
+  echo "Created tutorial: $created_name"
 else
-  labctl content push challenge "$CHALLENGE_NAME" --dir "$stage" --force
+  labctl content push tutorial "$TUTORIAL_NAME" --dir "$stage" --force
 fi

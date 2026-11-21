@@ -4,7 +4,7 @@
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from status import cgroup_status, read_status
+from status import cgroup_status, read_status, vm_memory
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -18,7 +18,8 @@ class Handler(BaseHTTPRequestHandler):
             body = json.dumps(payload, sort_keys=True).encode() + b"\n"
             self.send_response(200)
         except (OSError, ValueError, RuntimeError) as error:
-            body = json.dumps({"error": str(error)}).encode() + b"\n"
+            # The client-side check uses the VM size to explain a runtime that cannot start.
+            body = json.dumps({"error": str(error), **vm_memory()}).encode() + b"\n"
             self.send_response(503)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))

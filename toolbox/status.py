@@ -21,6 +21,13 @@ def read_status(path: str) -> dict:
     return json.loads(b"".join(chunks))
 
 
+def vm_memory() -> dict:
+    meminfo = {parts[0].rstrip(":"): int(parts[1]) for line in
+               Path("/proc/meminfo").read_text().splitlines() if (parts := line.split())}
+    return {"vm_mem_available_kib": meminfo["MemAvailable"],
+            "vm_mem_total_kib": meminfo["MemTotal"]}
+
+
 def cgroup_status(pid: int) -> dict:
     line = next((line for line in Path(f"/proc/{pid}/cgroup").read_text().splitlines()
                  if line.startswith("0::")), None)
@@ -30,10 +37,7 @@ def cgroup_status(pid: int) -> dict:
     values = {}
     for name in ("memory.current", "memory.peak", "memory.max", "memory.events"):
         values[name.replace(".", "_")] = (path / name).read_text().strip()
-    meminfo = {parts[0].rstrip(":"): int(parts[1]) for line in
-               Path("/proc/meminfo").read_text().splitlines() if (parts := line.split())}
-    values["vm_mem_available_kib"] = meminfo["MemAvailable"]
-    values["vm_mem_total_kib"] = meminfo["MemTotal"]
+    values.update(vm_memory())
     values["path"] = str(path)
     exe = Path(f"/proc/{pid}/exe")
     values["exe"] = str(exe.resolve())
@@ -59,6 +63,7 @@ def main() -> None:
             json.dump(status, temporary, indent=2, sort_keys=True)
             temporary.write("\n")
             name = temporary.name
+        os.chmod(name, 0o644)
         os.replace(name, args.output)
     print(json.dumps(status, sort_keys=True))
 

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 role="${1:-server}"
-[[ "$(uname -m)" == x86_64 ]] || { echo "This challenge needs x86_64." >&2; exit 1; }
+[[ "$(uname -m)" == x86_64 ]] || { echo "This lab needs x86_64." >&2; exit 1; }
 [[ "$(stat -fc %T /sys/fs/cgroup)" == cgroup2fs ]] || { echo "cgroup v2 is required." >&2; exit 1; }
 [[ -c /dev/net/tun ]] || { echo "/dev/net/tun is unavailable." >&2; exit 1; }
 ip addr show dev eth0 | grep -q '172\.16\.0\.' || { echo "Private lab NIC is missing." >&2; exit 1; }

@@ -3,6 +3,7 @@ baseline/bin/
 __pycache__/
 *.pyc
 *.tmp
+.playwright-cli
 
 AGENTS.md
 .agents
