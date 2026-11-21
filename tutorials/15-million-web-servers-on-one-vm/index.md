@@ -4,6 +4,7 @@ kind: tutorial
 title: Can One VM Host 15 Million Web Servers?
 
 description: |
+  Based on the article "15 million web servers on one VM" (kapteko.com).
   Measure the Linux limits that stop a naive 15-million-listener HTTP setup: ephemeral ports,
   per-process memory, and idle kernel sockets. Then run 15,000,000 smoltcp listeners in one
   user-space process and probe them from a second VM. The final step needs a 10 GiB server VM.
