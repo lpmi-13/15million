@@ -20,12 +20,19 @@ server_root systemd-run --unit 15m-walkthrough-baseline --uid laborant \
 server 'for _ in $(seq 1 20); do [ -s /tmp/15m-baseline.port ] && break; sleep 0.5; done
   curl -fsS --noproxy "*" "http://127.0.0.1:$(cat /tmp/15m-baseline.port)/"; echo'
 
-# Steps 2-5 run as the learner, including reading each saved report.
-for kind in port anyip process socket; do
-  server "sudo python3 /opt/15m-lab/toolbox/experiment.py $kind >/dev/null
-    cat /var/lib/15m-lab/runs/*/$kind.json >/dev/null"
-  echo "$kind probe passed and its report is readable"
-done
+# Steps 2-5 use the same commands shown to the learner. The two AnyIP servers
+# are transient units because a background process holds a labctl SSH tunnel.
+server 'cd ~/15m-lab/baseline/bin; ./port_exhaust | tee /tmp/15m-port.json'
+server sudo ip -6 route add local 2001:db8:1234:5678::/64 dev lo
+server sudo sysctl -w net.ipv6.ip_nonlocal_bind=1
+server_root systemd-run --unit 15m-walkthrough-alpha --uid laborant \
+  /opt/15m-lab/baseline/bin/bound_server 2001:db8:1234:5678::1 8081 alpha
+server_root systemd-run --unit 15m-walkthrough-beta --uid laborant \
+  /opt/15m-lab/baseline/bin/bound_server 2001:db8:1234:5678::2 8081 beta
+server 'curl -fsS -g -6 --noproxy "*" "http://[2001:db8:1234:5678::1]:8081/"'
+server 'curl -fsS -g -6 --noproxy "*" "http://[2001:db8:1234:5678::2]:8081/"'
+server "cd ~/15m-lab/baseline/bin; sudo /opt/15m-lab/toolbox/bounded.sh process 'for i in \$(seq 1 350); do echo \"\$i\"; ./server \"\$i\" & done; wait'"
+server "cd ~/15m-lab/baseline/bin; sudo /opt/15m-lab/toolbox/bounded.sh socket './socket_cost 200000'"
 
 # Step 6.
 for count in 1000 100000 1000000 15000000; do
@@ -37,7 +44,14 @@ for count in 1000 100000 1000000 15000000; do
     done
     journalctl -u 15m-runtime.service -n 20 --no-pager
     exit 1"
-  client python3 /opt/15m-lab/toolbox/probe_client.py --count "$count" --check-outside >/dev/null
+  case "$count" in
+    1000) last=10.0.3.232 ;;
+    100000) last=10.1.134.160 ;;
+    1000000) last=10.15.66.64 ;;
+    15000000) last=10.228.225.192 ;;
+  esac
+  client curl -fsS --noproxy '*' "http://10.0.0.1:8080/" >/dev/null
+  client curl -fsS --noproxy '*' "http://$last:8080/" >/dev/null
   echo "$count listeners answered from client-01"
 done
 client 'for ip in 10.0.0.1 10.114.112.224 10.228.225.192; do

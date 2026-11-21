@@ -6,6 +6,10 @@ systemctl stop 15m-network-server.service 2>/dev/null || true
 /opt/15m-lab/toolbox/network_server.sh teardown
 /opt/15m-lab/toolbox/network_client.sh teardown
 pkill -x webserver_libc 2>/dev/null || true
+pkill -x bound_server 2>/dev/null || true
+pkill -x server 2>/dev/null || true
+ip -6 route del local 2001:db8:1234:5678::/64 dev lo 2>/dev/null || true
+sysctl -q -w net.ipv6.ip_nonlocal_bind=0 2>/dev/null || true
 
 for group in /sys/fs/cgroup/15m-lab-*; do
   [[ -d "$group" ]] || continue

@@ -1,1 +1,1 @@
-laborant ALL=(root) NOPASSWD: /opt/15m-lab/toolbox/runtime.sh *, /opt/15m-lab/toolbox/reset.sh, /usr/bin/python3 /opt/15m-lab/toolbox/experiment.py *
+laborant ALL=(root) NOPASSWD: /opt/15m-lab/toolbox/runtime.sh *, /opt/15m-lab/toolbox/reset.sh, /opt/15m-lab/toolbox/bounded.sh *, /usr/sbin/ip -6 route add local 2001\:db8\:1234\:5678\:\:/64 dev lo, /usr/sbin/sysctl -w net.ipv6.ip_nonlocal_bind=1

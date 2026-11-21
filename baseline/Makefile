@@ -1,6 +1,6 @@
 CC ?= cc
 CFLAGS ?= -O2 -Wall -Wextra -Werror -std=c11
-BIN = bin/webserver_libc bin/bound_server bin/port_exhaust bin/socket_cost
+BIN = bin/webserver_libc bin/bound_server bin/port_exhaust bin/socket_cost bin/server
 
 .PHONY: all clean
 all: $(BIN)

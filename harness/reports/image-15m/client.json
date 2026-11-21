@@ -6,24 +6,24 @@
     "cgroup": {
       "exe": "/opt/15m-lab/bin/million-listeners",
       "exe_sha256": "340b9cfc26083d8955250b4d15d54fecbf457abfd4053d122dda9b7103b908c8",
-      "memory_current": "9258876928",
+      "memory_current": "9258868736",
       "memory_events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
       "memory_max": "9663676416",
-      "memory_peak": "9258876928",
+      "memory_peak": "9258868736",
       "path": "/sys/fs/cgroup/system.slice/15m-runtime.service",
-      "pss_bytes": 9240753152,
-      "rss_bytes": 9242251264,
-      "vm_mem_available_kib": 905916,
+      "pss_bytes": 9240754176,
+      "rss_bytes": 9242267648,
+      "vm_mem_available_kib": 891720,
       "vm_mem_total_kib": 10264988
     },
     "initialized": 15000000,
     "last": "10.228.225.192",
     "listener_bytes": 24,
-    "pid": 1405,
+    "pid": 1392,
     "port": 8080,
     "ready": true,
     "requested": 15000000,
-    "startup_ms": 5563,
+    "startup_ms": 5594,
     "task_bytes": 16
   },
   "before": {
@@ -33,24 +33,24 @@
     "cgroup": {
       "exe": "/opt/15m-lab/bin/million-listeners",
       "exe_sha256": "340b9cfc26083d8955250b4d15d54fecbf457abfd4053d122dda9b7103b908c8",
-      "memory_current": "9258614784",
+      "memory_current": "9258606592",
       "memory_events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
       "memory_max": "9663676416",
-      "memory_peak": "9258663936",
+      "memory_peak": "9258778624",
       "path": "/sys/fs/cgroup/system.slice/15m-runtime.service",
-      "pss_bytes": 9240744960,
-      "rss_bytes": 9242243072,
-      "vm_mem_available_kib": 906528,
+      "pss_bytes": 9240745984,
+      "rss_bytes": 9242259456,
+      "vm_mem_available_kib": 892588,
       "vm_mem_total_kib": 10264988
     },
     "initialized": 15000000,
     "last": "10.228.225.192",
     "listener_bytes": 24,
-    "pid": 1405,
+    "pid": 1392,
     "port": 8080,
     "ready": true,
     "requested": 15000000,
-    "startup_ms": 5563,
+    "startup_ms": 5594,
     "task_bytes": 16
   },
   "count": 15000000,
@@ -64,63 +64,63 @@
       "body": "1",
       "index": 0,
       "ip": "10.0.0.1",
-      "latency_ms": 1.359
+      "latency_ms": 2.338
     },
     {
       "body": "870436",
       "index": 870435,
       "ip": "10.13.72.36",
-      "latency_ms": 2.118
+      "latency_ms": 1.964
     },
     {
       "body": "1055741",
       "index": 1055740,
       "ip": "10.16.27.253",
-      "latency_ms": 1.994
+      "latency_ms": 2.098
     },
     {
       "body": "3091498",
       "index": 3091497,
       "ip": "10.47.44.42",
-      "latency_ms": 2.168
+      "latency_ms": 2.052
     },
     {
       "body": "6378908",
       "index": 6378907,
       "ip": "10.97.85.156",
-      "latency_ms": 2.178
+      "latency_ms": 2.151
     },
     {
       "body": "7500000",
       "index": 7499999,
       "ip": "10.114.112.224",
-      "latency_ms": 2.07
+      "latency_ms": 2.151
     },
     {
       "body": "9521278",
       "index": 9521277,
       "ip": "10.145.72.126",
-      "latency_ms": 2.159
+      "latency_ms": 2.192
     },
     {
       "body": "15000000",
       "index": 14999999,
       "ip": "10.228.225.192",
-      "latency_ms": 2.119
+      "latency_ms": 2.14
     },
     {
       "body": "1",
       "index": 0,
       "ip": "10.0.0.1",
-      "latency_ms": 2.14
+      "latency_ms": 2.185
     },
     {
       "body": "15000000",
       "index": 14999999,
       "ip": "10.228.225.192",
-      "latency_ms": 2.151
+      "latency_ms": 2.114
     }
   ],
   "schema": 1,
-  "unix_time": 1795282398.0211365
+  "unix_time": 1795290157.3154655
 }

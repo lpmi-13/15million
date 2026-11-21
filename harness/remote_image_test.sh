@@ -5,7 +5,7 @@ set -euo pipefail
 run_id="${1:?usage: remote_image_test.sh PLAYGROUND_RUN_ID}"
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 report="$root/harness/reports/image-15m"
-rootfs_image="${ROOTFS_IMAGE:-ghcr.io/lpmi-13/15million-rootfs:v4}"
+rootfs_image="${ROOTFS_IMAGE:-ghcr.io/lpmi-13/15million-rootfs:v5}"
 image_id="$(docker image inspect "$rootfs_image" --format '{{.Id}}')"
 image_digest="$(docker buildx imagetools inspect "$rootfs_image" --format '{{.Manifest.Digest}}')"
 [[ "$image_digest" == sha256:* ]] || { echo "Could not resolve the pushed image digest." >&2; exit 1; }
@@ -36,10 +36,21 @@ server systemd-run --unit baseline-image-test --uid laborant \
 server python3 /opt/15m-lab/tasks/verify_baseline.py
 server systemctl stop baseline-image-test
 
-for kind in port anyip process socket; do
-  learner sudo python3 /opt/15m-lab/toolbox/experiment.py "$kind" --run-id "image-$kind"
-  server python3 /opt/15m-lab/tasks/verify_evidence.py "$kind"
-done
+learner 'cd ~/15m-lab/baseline/bin; ./port_exhaust | tee /tmp/15m-port.json'
+server python3 /opt/15m-lab/tasks/verify_evidence.py port
+learner sudo ip -6 route add local 2001:db8:1234:5678::/64 dev lo
+learner sudo sysctl -w net.ipv6.ip_nonlocal_bind=1
+server systemd-run --unit 15m-image-alpha --uid laborant \
+  /opt/15m-lab/baseline/bin/bound_server 2001:db8:1234:5678::1 8081 alpha
+server systemd-run --unit 15m-image-beta --uid laborant \
+  /opt/15m-lab/baseline/bin/bound_server 2001:db8:1234:5678::2 8081 beta
+learner 'curl -fsS -g -6 --noproxy "*" "http://[2001:db8:1234:5678::1]:8081/"'
+learner 'curl -fsS -g -6 --noproxy "*" "http://[2001:db8:1234:5678::2]:8081/"'
+server python3 /opt/15m-lab/tasks/verify_evidence.py anyip
+learner "cd ~/15m-lab/baseline/bin; sudo /opt/15m-lab/toolbox/bounded.sh process 'for i in \$(seq 1 350); do echo \"\$i\"; ./server \"\$i\" & done; wait'"
+server python3 /opt/15m-lab/tasks/verify_evidence.py process
+learner "cd ~/15m-lab/baseline/bin; sudo /opt/15m-lab/toolbox/bounded.sh socket './socket_cost 200000'"
+server python3 /opt/15m-lab/tasks/verify_evidence.py socket
 
 learner sudo /opt/15m-lab/toolbox/runtime.sh start 1000
 server python3 /opt/15m-lab/toolbox/wait_runtime.py --count 1000

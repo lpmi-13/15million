@@ -5,8 +5,8 @@ title: Can One VM Host 15 Million Web Servers?
 
 description: |
   All credit to the original article "15 million web servers on one VM" (kapteko.com).
-  Measure the Linux limits that stop a naive 15-million-listener HTTP setup: ephemeral ports,
-  per-process memory, and idle kernel sockets. Then run 15,000,000 smoltcp listeners in one
+  Reproduce the Linux limits that stop a naive 15-million-listener HTTP setup with C programs,
+  an AnyIP route, and a bounded shell loop. Then run 15,000,000 smoltcp listeners in one
   user-space process and probe them from a second VM. The final step needs a 10 GiB server VM.
 
 categories:
@@ -115,10 +115,9 @@ client-01 (2 CPUs, 2 GiB) ── 172.16.0.0/24 ── dev-01 (4 CPUs, 10 GiB)
 The lab files are in `~/15m-lab` on both VMs.
 Run the commands in steps 1 to 5 in the **Server** tab (dev-01).
 Step 6 says which commands go to the **Client** tab (client-01).
-The sudo rules allow only the `/opt/15m-lab` paths, so the `sudo` commands below use them.
+The privileged commands use fixed sudo rules. The commands in steps 4 and 5 run inside small memory cgroups, so the VM stays usable after the OOM kill. The wrapper prints the kernel's `memory.events` counter and saves a report in `/var/lib/15m-lab/runs/`.
 
-The probes in steps 2 to 5 run with fixed memory and time limits, and they clean up their own namespaces and cgroups.
-Each probe prints its report and saves a copy in `/var/lib/15m-lab/runs/`.
+The article's loops are sketches. Bash rejects `&;`, and GNU `seq` does not accept underscores in `15_000_000`. The runnable loops below use `&` before `done` and decimal numbers without separators. The process loop stops at 350 iterations because its 32 MiB cgroup normally runs out of memory first.
 
 ## 1. First HTTP response
 
@@ -159,15 +158,15 @@ On x86-64, `strace` shows `recv()` and `send()` as `recvfrom()` and `sendto()`, 
 ## 2. How many unbound listeners fit?
 
 Predict the first limit that one process hits when it calls `socket()` and `listen()` in a loop without `bind()`.
-The probe below does this in its own network namespace and stops at the first error or at a safe upper bound.
-It also records the ephemeral port range.
+The C program below makes the same `socket()` and `listen()` calls as the article's first loop. It keeps each socket open and stops at the first error or at a safe upper bound. Read `baseline/port_exhaust.c` before running it.
 
 ```bash
-sudo python3 /opt/15m-lab/toolbox/experiment.py port
-cat /var/lib/15m-lab/runs/*/port.json
+sysctl net.ipv4.ip_local_port_range
+cd ~/15m-lab/baseline/bin
+./port_exhaust | tee /tmp/15m-port.json
 ```
 
-In the report, find `range_low`, `range_high`, `count`, `failed_syscall`, and `errno`.
+In the output, find `range_low`, `range_high`, `count`, `failed_syscall`, and `errno`.
 
 ::simple-task
 ---
@@ -182,7 +181,7 @@ The probe ran out of ephemeral ports.
 ::
 
 On the test VM, `ip_local_port_range` was `32768 60999`.
-The probe held 28,232 listeners, and then `listen()` failed with `errno` 98 (`EADDRINUSE`).
+The C loop held 28,232 listeners, and then `listen()` failed with `errno` 98 (`EADDRINUSE`).
 That count is the full width of the range: 60999 - 32768 + 1 = 28,232.
 Every implicit bind takes one port from this range, so one address cannot hold more implicitly bound listeners than the range is wide.
 A TCP port is a 16-bit number, so even the full port space gives at most 65,535 ports per address.
@@ -196,20 +195,24 @@ The count on your VM depends on the kernel and on the ports that other sockets a
 
 The check accepts only a run that stopped at `listen()` with `errno` 98 (`EADDRINUSE`) after it used up the ephemeral range.
 Another `errno` means that a different limit was hit first, such as the open file limit.
-Such a run shows nothing about ports.
-Run the probe again and compare `failed_syscall`, `errno`, and `events` in the new report.
+Such a run shows nothing about ports. Check your open file limit with `ulimit -n`.
 ::
 
 ## 3. Add addresses with AnyIP
 
 Predict whether two IPv6 addresses can use the **same port** at the same time.
-The next probe creates a disposable network namespace and adds a `local` route for the documentation prefix `2001:db8:1234:5678::/64`.
-Then it starts two C servers on port 8081.
+Add the article's `local` route for the documentation prefix `2001:db8:1234:5678::/64`.
+Then start two C servers on port 8081.
 One binds `2001:db8:1234:5678::1`, and the other binds `2001:db8:1234:5678::2`.
 
 ```bash
-sudo python3 /opt/15m-lab/toolbox/experiment.py anyip
-cat /var/lib/15m-lab/runs/*/anyip.json
+sudo ip -6 route add local 2001:db8:1234:5678::/64 dev lo
+sudo sysctl -w net.ipv6.ip_nonlocal_bind=1
+cd ~/15m-lab/baseline/bin
+./bound_server 2001:db8:1234:5678::1 8081 alpha &
+./bound_server 2001:db8:1234:5678::2 8081 beta &
+curl -g -6 --noproxy '*' 'http://[2001:db8:1234:5678::1]:8081/'
+curl -g -6 --noproxy '*' 'http://[2001:db8:1234:5678::2]:8081/'
 ```
 
 The two replies should be `alpha` and `beta`.
@@ -228,8 +231,8 @@ Both addresses answered on port 8081.
 
 A `local` route makes the kernel accept traffic for a whole prefix as local, without assigning each address to an interface.
 This technique is called AnyIP.
-On this 6.1 kernel, the explicit IPv6 binds still failed with `EADDRNOTAVAIL` until the probe set `net.ipv6.ip_nonlocal_bind=1`.
-The probe sets it only inside the disposable namespace, so the rest of the VM keeps the default.
+On this 6.1 kernel, the explicit IPv6 binds still failed with `EADDRNOTAVAIL` until `net.ipv6.ip_nonlocal_bind=1` was set.
+The route and sysctl apply only to this disposable VM. `sudo /opt/15m-lab/toolbox/reset.sh` removes them.
 The [kernel sysctl documentation](https://docs.kernel.org/networking/ip-sysctl.html) describes this setting.
 
 The kernel identifies a listener by its address and port together.
@@ -242,16 +245,16 @@ The runtime in step 6 uses the same idea with private IPv4 addresses.
 ## 4. One process per address
 
 Predict the memory cost if every address gets its own Linux process.
-The probe starts tiny C servers one by one in a cgroup with a **32 MiB** memory limit.
-It stops when the cgroup records an OOM kill, and then it removes all the servers.
-It never starts more than 350 processes.
+Read `baseline/server.c`. It maps the command-line index to a distinct `127.0.0.0/8` loopback address and listens on port 8081. The first address is `127.0.0.2`.
+
+Run the article's `./server "$i" &` loop inside a **32 MiB** cgroup. The wrapper accepts the loop as a Bash command, runs it as `laborant`, and stops and removes the whole group when the kernel records an OOM kill. The 350-iteration bound prevents a runaway process launch if the memory limit behaves differently on your VM.
 
 ```bash
-sudo python3 /opt/15m-lab/toolbox/experiment.py process
-cat /var/lib/15m-lab/runs/*/process.json
+cd ~/15m-lab/baseline/bin
+sudo /opt/15m-lab/toolbox/bounded.sh process 'for i in $(seq 1 350); do echo "$i"; ./server "$i" & done; wait'
 ```
 
-Compare `peak_live`, `first_ten_pss_bytes`, `memory_peak`, and `extrapolated_15m_bytes`.
+The tail of the output shows the last indexes attempted, the cgroup's peak memory, `oom_kill=1` or higher, and `Out of memory`. Read the report path printed by the wrapper to calculate an approximate memory cost per server. The count is approximate because several forks can race with the OOM kill.
 
 ::simple-task
 ---
@@ -265,9 +268,7 @@ Waiting for a process probe report with a cgroup OOM kill...
 The process probe reached its memory limit.
 ::
 
-On the test VM, the cgroup reached its limit at about 210 processes, which is about 160 KB per process.
-At that rate, 15 million processes would need about 2.4 TB.
-Your numbers may differ, because the cost depends on the executable, the shared pages, the kernel, and the allocator.
+On the test VM, this loop reached about 140 indexes before the 32 MiB OOM kill. Dividing the limit by that count gives roughly 230 KB per attempt, or about 3.5 TB for 15 million processes. Bash and cgroup bookkeeping also use some of that memory, so this is only a rough projection. Your result can differ with the executable, shared pages, kernel, and allocator.
 The OOM kill stays inside the probe's cgroup.
 
 ## 5. Do idle kernel sockets cost nothing?
@@ -275,15 +276,14 @@ The OOM kill stays inside the probe's cgroup.
 Before you run the next probe, calculate `15,000,000 × 16` bytes.
 It is the memory for one 16-byte task record per listener, which the runtime in step 6 uses.
 Then predict whether **unbound, idle kernel TCP sockets** cost any memory.
-The probe creates TCP sockets without calling `listen()`, so it cannot run out of ports.
-It runs in a cgroup with a **64 MiB** limit.
+Read `baseline/socket_cost.c`. It creates TCP sockets without calling `listen()`, so it cannot run out of ports. Run it in a **64 MiB** cgroup and watch the kernel memory counter rise.
 
 ```bash
-sudo python3 /opt/15m-lab/toolbox/experiment.py socket
-cat /var/lib/15m-lab/runs/*/socket.json
+cd ~/15m-lab/baseline/bin
+sudo /opt/15m-lab/toolbox/bounded.sh socket './socket_cost 200000'
 ```
 
-Look at `max_observed_count`, `memory_peak`, `slab_peak_observed`, and `events.oom_kill`.
+The C program prints `count=1000`, `count=2000`, and so on. The wrapper prints the last few counts, `memory.peak`, the `oom_kill` counter, and `Out of memory`. Its report includes `slab_peak_observed`.
 
 ::simple-task
 ---
@@ -326,15 +326,14 @@ sudo /opt/15m-lab/toolbox/runtime.sh start 1000
 sudo /opt/15m-lab/toolbox/runtime.sh status
 ```
 
-When the status shows `"ready": true`, probe the listeners from the **Client** tab:
+When the status shows `"ready": true`, request the first and last listeners from the **Client** tab:
 
 ```bash
-python3 ~/15m-lab/toolbox/probe_client.py --count 1000 --check-outside
+curl --noproxy '*' http://10.0.0.1:8080/
+curl --noproxy '*' http://10.0.3.232:8080/
 ```
 
-The probe sends requests to the first, middle, and last addresses and to five random ones.
-It expects a refused connection from the first address after the range.
-Repeat both steps with `100000` and `1000000`.
+The responses should be `1` and `1000`. Repeat the server start with `100000` and `1000000`, then request their last addresses, `10.1.134.160` and `10.15.66.64`. The check at the end of the tutorial also samples other addresses and rejects an address beyond the range.
 
 Note the `memory_peak` value in the status output for each count.
 On the test VM, the 1,000,000-listener run peaked at about 618 MB, which is about 618 bytes per listener.
@@ -354,10 +353,9 @@ journalctl -u 15m-runtime.service -n 20 --no-pager
 ```
 
 The start takes about 5 to 15 seconds.
-When the status shows `"ready": true`, run the probes in the **Client** tab:
+When the status shows `"ready": true`, request three addresses in the **Client** tab:
 
 ```bash
-python3 ~/15m-lab/toolbox/probe_client.py --count 15000000 --check-outside
 curl --noproxy '*' http://10.0.0.1:8080/
 curl --noproxy '*' http://10.114.112.224:8080/
 curl --noproxy '*' http://10.228.225.192:8080/
@@ -404,7 +402,7 @@ The table compares the three ways to give every address its own listener.
 
 | Approach | Measured cost per address | Projected for 15 million |
 |---|---:|---:|
-| One Linux process | about 160 KB | about 2.4 TB |
+| One Linux process | roughly 230 KB | roughly 3.5 TB |
 | One idle kernel socket | about 3.7 KiB | about 56 GB |
 | One `smoltcp` listener in one process | about 617 bytes | about 9.3 GB |
 

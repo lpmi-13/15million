@@ -44,7 +44,8 @@ RUN set -eu; \
       chown -h laborant:laborant /home/laborant/15m-lab; \
     fi; \
     test -x /opt/15m-lab/bin/million-listeners; \
-    test -x /opt/15m-lab/baseline/bin/port_exhaust
+    test -x /opt/15m-lab/baseline/bin/port_exhaust; \
+    test -x /opt/15m-lab/baseline/bin/server
 
 USER laborant
 ENV HOME=/home/laborant
