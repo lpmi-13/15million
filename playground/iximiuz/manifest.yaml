@@ -30,33 +30,11 @@ playground:
       resources:
         cpuCount: 4
         ramSize: 10GiB
-    - name: client-01
-      users:
-        - name: root
-        - name: laborant
-          default: true
-          welcome: |
-            Probe 10.0.0.0/8 through dev-01. The route stays inside this playground.
-      drives:
-        - source: oci://ghcr.io/lpmi-13/15million-rootfs:v11
-          mount: /
-          size: 10GiB
-      network:
-        interfaces:
-          - network: local
-            address: 172.16.0.3/24
-      resources:
-        cpuCount: 2
-        ramSize: 2GiB
   tabs:
     - id: terminal-dev-01
       kind: terminal
       name: Server
       machine: dev-01
-    - id: terminal-client-01
-      kind: terminal
-      name: Client
-      machine: client-01
   initTasks:
     init_dev_01_ready:
       name: init_dev_01_ready
@@ -67,15 +45,6 @@ playground:
       run: |-
         #!/bin/bash
         /opt/15m-lab/tasks/wait_ready.sh server
-    init_client_01_ready:
-      name: init_client_01_ready
-      machine: client-01
-      init: true
-      user: root
-      timeout_seconds: 300
-      run: |-
-        #!/bin/bash
-        /opt/15m-lab/tasks/wait_ready.sh client
   accessControl:
     canList:
       - anyone

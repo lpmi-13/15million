@@ -13,7 +13,6 @@ image_digest="$(docker buildx imagetools inspect "$rootfs_image" --format '{{.Ma
 mkdir -p "$report"
 
 server() { labctl ssh "$run_id" -m dev-01 -u root -- "$@"; }
-client() { labctl ssh "$run_id" -m client-01 -u root -- "$@"; }
 learner() { labctl ssh "$run_id" -m dev-01 -u laborant -- "$@"; }
 edit() { learner bash /tmp/15m-learner-edits.sh "$1"; }
 cleanup() { learner sudo /opt/15m-lab/toolbox/runtime.sh stop >/dev/null 2>&1 || true; }
@@ -23,7 +22,6 @@ labctl cp -m dev-01 -u laborant "$root/harness/apply_learner_edits.sh" \
   "$run_id:/tmp/15m-learner-edits.sh"
 
 server /opt/15m-lab/tasks/wait_ready.sh server
-client /opt/15m-lab/tasks/wait_ready.sh client
 if server python3 /opt/15m-lab/tasks/verify_baseline.py >/dev/null 2>&1; then
   echo "baseline grader unexpectedly passed before startup" >&2; exit 1
 fi
@@ -38,7 +36,7 @@ for kind in port anyip process socket; do
     echo "$kind grader unexpectedly passed before its probe" >&2; exit 1
   fi
 done
-if client python3 /opt/15m-lab/tasks/verify_runtime.py >/dev/null 2>&1; then
+if server python3 /opt/15m-lab/tasks/verify_runtime.py >/dev/null 2>&1; then
   echo "runtime grader unexpectedly passed before startup" >&2; exit 1
 fi
 
@@ -84,27 +82,27 @@ server python3 /opt/15m-lab/tasks/verify_evidence.py socket
 
 learner sudo /opt/15m-lab/toolbox/runtime.sh start 1000
 server python3 /opt/15m-lab/toolbox/wait_runtime.py --count 1000
-client python3 /opt/15m-lab/toolbox/probe_client.py --count 1000 --check-outside
-if client python3 /opt/15m-lab/tasks/verify_runtime.py >/dev/null 2>&1; then
+server python3 /opt/15m-lab/toolbox/probe_client.py --count 1000 --check-outside
+if server python3 /opt/15m-lab/tasks/verify_runtime.py >/dev/null 2>&1; then
   echo "runtime grader unexpectedly passed with only 1000 listeners" >&2; exit 1
 fi
 
 learner sudo /opt/15m-lab/toolbox/runtime.sh start 15000000
 server python3 /opt/15m-lab/toolbox/wait_runtime.py --count 15000000
-client python3 /opt/15m-lab/tasks/verify_runtime.py \
+server python3 /opt/15m-lab/tasks/verify_runtime.py \
   --output /var/lib/15m-lab/runs/image-15m/client.json
-labctl cp -m client-01 -u root "$root/harness/concurrency_probe.py" \
+labctl cp -m dev-01 -u root "$root/harness/concurrency_probe.py" \
   "$run_id:/tmp/concurrency_probe.py"
-client python3 /tmp/concurrency_probe.py \
+server python3 /tmp/concurrency_probe.py \
   --output /var/lib/15m-lab/runs/image-15m/concurrency.json
 server python3 /opt/15m-lab/toolbox/status.py \
   --output /var/lib/15m-lab/runs/image-15m/server.json
 
 labctl cp -m dev-01 -u root \
   "$run_id:/var/lib/15m-lab/runs/image-15m/server.json" "$report/server.json"
-labctl cp -m client-01 -u root \
+labctl cp -m dev-01 -u root \
   "$run_id:/var/lib/15m-lab/runs/image-15m/client.json" "$report/client.json"
-labctl cp -m client-01 -u root \
+labctl cp -m dev-01 -u root \
   "$run_id:/var/lib/15m-lab/runs/image-15m/concurrency.json" "$report/concurrency.json"
 python3 "$root/harness/check_release.py" --dir "$report"
 python3 - "$report" "$rootfs_image" "$image_id" "$image_digest" "$run_id" <<'PY'

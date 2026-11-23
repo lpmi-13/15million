@@ -20,18 +20,18 @@ the version after the one in manifest.yaml (v10 becomes v11).
 EOF
 }
 
-# Prints the tag that both drives in manifest.yaml use.
+# Prints the tag of the single drive in manifest.yaml.
 current_tag() {
   local sources tag
   mapfile -t sources < <(sed -nE 's#^[[:space:]]*- source: oci://([^[:space:]]+)[[:space:]]*$#\1#p' "$manifest")
-  if [[ ${#sources[@]} -eq 2 ]]; then
+  if [[ ${#sources[@]} -eq 1 ]]; then
     tag="${sources[0]##*:}"
-    if [[ "${sources[0]}" == "$image_repo:$tag" && "${sources[1]}" == "${sources[0]}" ]]; then
+    if [[ "${sources[0]}" == "$image_repo:$tag" ]]; then
       printf '%s\n' "$tag"
       return 0
     fi
   fi
-  echo "error: both drives in $manifest must use the same $image_repo:<tag> image." >&2
+  echo "error: $manifest must have one drive with a $image_repo:<tag> image." >&2
   return 1
 }
 

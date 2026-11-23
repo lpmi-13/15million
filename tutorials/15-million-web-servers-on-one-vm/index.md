@@ -7,7 +7,7 @@ description: |
   All credit to the original article "15 million web servers on one VM" (kapteko.com).
   Edit, compile, and run small C and Rust programs while reproducing the Linux limits behind the source article:
   ephemeral ports, per-process memory, and idle kernel sockets. Then run 15,000,000 smoltcp listeners in one
-  user-space process and probe them from a second VM. The final step needs a 10 GiB server VM.
+  user-space process and send requests to them. The final step needs a 10 GiB VM.
 
 categories:
   - linux
@@ -29,7 +29,6 @@ playground:
 
 tasks:
   verify_baseline_http:
-    machine: dev-01
     run: |
       /usr/bin/python3 /opt/15m-lab/tasks/verify_baseline.py --hint-file /var/lib/15m-lab/hints/verify_baseline_http.txt
     hintcheck: |
@@ -38,7 +37,6 @@ tasks:
       exit 0
 
   verify_port_exhaustion:
-    machine: dev-01
     run: |
       /usr/bin/python3 /opt/15m-lab/tasks/verify_evidence.py port --hint-file /var/lib/15m-lab/hints/verify_port_exhaustion.txt
     hintcheck: |
@@ -47,7 +45,6 @@ tasks:
       exit 0
 
   verify_anyip:
-    machine: dev-01
     run: |
       /usr/bin/python3 /opt/15m-lab/tasks/verify_evidence.py anyip --hint-file /var/lib/15m-lab/hints/verify_anyip.txt
     hintcheck: |
@@ -56,7 +53,6 @@ tasks:
       exit 0
 
   verify_process_cost:
-    machine: dev-01
     needs:
       - verify_indexed_server
     run: |
@@ -67,7 +63,6 @@ tasks:
       exit 0
 
   verify_kernel_socket_cost:
-    machine: dev-01
     needs:
       - verify_rust_context
     run: |
@@ -78,7 +73,6 @@ tasks:
       exit 0
 
   verify_indexed_server:
-    machine: dev-01
     run: |
       /usr/bin/python3 /opt/15m-lab/tasks/verify_indexed.py --hint-file /var/lib/15m-lab/hints/verify_indexed_server.txt
     hintcheck: |
@@ -87,7 +81,6 @@ tasks:
       exit 0
 
   verify_rust_context:
-    machine: dev-01
     run: |
       /usr/bin/python3 /opt/15m-lab/tasks/verify_rust.py --hint-file /var/lib/15m-lab/hints/verify_rust_context.txt
     hintcheck: |
@@ -96,7 +89,6 @@ tasks:
       exit 0
 
   verify_runtime_tun:
-    machine: client-01
     run: |
       /usr/bin/python3 /opt/15m-lab/tasks/verify_runtime.py --hint-file /var/lib/15m-lab/hints/verify_runtime_tun.txt
     hintcheck: |
@@ -110,7 +102,7 @@ tasks:
 kind: warning
 ---
 
-The full 15,000,000-listener run needs the 10 GiB server VM. On the free tier's 4 GiB VM, steps 1 to 5 and the
+The full 15,000,000-listener run needs the 10 GiB VM. On the free tier's 4 GiB VM, steps 1 to 5 and the
 1,000,000-listener run still work. In our test, the 15,000,000-listener process ran out of memory after about
 5 million listeners, so the final check cannot pass on that VM.
 ::
@@ -130,15 +122,13 @@ It does not open 15 million connections at the same time.
 Every address is in the private `10.0.0.0/8` range, which is routed only inside this playground.
 
 ```text
-client-01 (2 CPUs, 2 GiB) ── 172.16.0.0/24 ── dev-01 (4 CPUs, 10 GiB)
-       TCP probes          10/8 via dev-01        TUN → smoltcp → HTTP task
+dev-01 (4 CPUs, 10 GiB)
+curl ── 10.0.0.0/8 route ── smolbench (TUN) ── smoltcp ── HTTP task
 ```
 
-The read-only lab files are in `/opt/15m-lab` on both VMs, and `~/15m-lab` is a link to that directory.
-The starter code that you edit is in `/home/laborant/15m-work` on the server VM.
+The read-only lab files are in `/opt/15m-lab`, and `~/15m-lab` is a link to that directory.
+The starter code that you edit is in `/home/laborant/15m-work`.
 The commands use absolute paths, so you can run them from any directory.
-Run the commands in steps 1 to 5 in the **Server** tab (dev-01).
-Step 6 says which commands go to the **Client** tab (client-01).
 The privileged commands use fixed sudo rules. `sudo` works only for the exact commands in this tutorial, and `sudo -l` lists them. The process loops in steps 2 and 4 and the socket loop in step 5 run inside small memory cgroups, so the VM stays usable after each OOM kill. The wrapper prints the kernel's `memory.events` counter and saves a report in `/var/lib/15m-lab/runs/`.
 
 ## 1. First HTTP response
@@ -214,7 +204,7 @@ On x86-64, `strace` shows `recv()` and `send()` as `recvfrom()` and `sendto()`, 
 
 ## 2. How many unbound listeners fit?
 
-The article's first loop starts the no-argument server 15 million times. Each copy makes one unbound TCP listener. Run this version of the loop in the **Server** tab:
+The article's first loop starts the no-argument server 15 million times. Each copy makes one unbound TCP listener. Run this version of the loop:
 
 ```bash
 sudo /opt/15m-lab/toolbox/bounded.sh article 'for ((i=1; i<=15000000; i++)); do echo "$i"; /home/laborant/15m-work/server & done; wait'
@@ -746,7 +736,7 @@ The runtime serves one fixed HTTP response.
 It does not run compiled C programs or intercept their system calls.
 
 Start with small counts.
-In the **Server** tab, start 1,000 listeners and check the status:
+Start 1,000 listeners and check the status:
 
 ```bash
 sudo /opt/15m-lab/toolbox/runtime.sh start 1000
@@ -786,7 +776,7 @@ Started 1000 listeners. Watch: journalctl -fu 15m-runtime.service
 }
 ```
 
-When the status shows `"ready": true`, request the first and last listeners from the **Client** tab:
+When the status shows `"ready": true`, request the first and last listeners:
 
 ```bash
 curl --noproxy '*' -w '\n' 'http://10.0.0.1:8080/'
@@ -809,7 +799,7 @@ The runtime runs in a systemd service with `MemoryMax=9G` (9,663,676,416 bytes),
 The buffers are 48 bytes because the longest response, from listener 15000000, is 46 bytes.
 An earlier build of this runtime with 64-byte buffers used about 32 more bytes per listener, which is about 480 MB more at this scale.
 
-Now start the full run in the **Server** tab.
+Now start the full run.
 The runtime is a prebuilt release binary.
 Do not build anything during the run, because a build needs memory that the run does not leave free.
 
@@ -843,7 +833,7 @@ Nov 23 16:18:54 dev-01 million-listeners[1573]: initialized=15000000
 Nov 23 16:18:54 dev-01 million-listeners[1573]: resident_listeners_verified=15000000 rx_bytes=48 tx_bytes=48
 ```
 
-When the status shows `"ready": true`, request three addresses in the **Client** tab:
+When the status shows `"ready": true`, request three addresses:
 
 ```bash
 curl --noproxy '*' -w '\n' 'http://10.0.0.1:8080/'
@@ -859,8 +849,7 @@ The responses are the first, middle, and last listener numbers:
 15000000
 ```
 
-The last check runs on client-01.
-It reads the live process through a read-only status service on dev-01, and it checks the service's cgroup and the free memory of the VM.
+The last check reads the live process through a read-only status service, and it checks the service's cgroup and the free memory of the VM.
 Then it sends HTTP requests to sampled addresses and to the first address after the range.
 At the end, it confirms that the process ID stayed the same and that the counter of accepted connections grew.
 A run with fewer listeners does not pass.
@@ -871,7 +860,7 @@ A run with fewer listeners does not pass.
 :name: verify_runtime_tun
 ---
 #active
-Waiting for 15,000,000 listeners to answer from client-01...
+Waiting for 15,000,000 listeners to answer...
 
 #completed
 All 15,000,000 listeners are up, and the sampled ones answered.
@@ -883,9 +872,9 @@ All 15,000,000 listeners are up, and the sampled ones answered.
 ---
 
 Read the service log with `journalctl -u 15m-runtime.service -n 50 --no-pager`, and check the status with `sudo /opt/15m-lab/toolbox/runtime.sh status | jq .`.
-`Failed with result 'oom-kill'` means that the server VM has too little memory for the run.
+`Failed with result 'oom-kill'` means that the VM has too little memory for the run.
 Compare `MemTotal` in `/proc/meminfo` with the 10 GiB that the full run needs.
-On client-01, `ip route get 10.0.0.1` should show `via 172.16.0.2`.
+`ip route get 10.0.0.1` should show `dev smolbench`.
 To go back to the starting state, run `sudo /opt/15m-lab/toolbox/reset.sh`.
 It stops the lab services and moves the old reports to `/var/lib/15m-lab/archive/`.
 ::
