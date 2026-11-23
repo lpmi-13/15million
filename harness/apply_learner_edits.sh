@@ -23,6 +23,7 @@ elif stage == "rust":
     changes = (
         ("// TODO (step 5): Add fd_server and fd_client as i32 fields.",
          "fd_server: i32,\n    fd_client: i32,"),
+        ("fn listener_address(_index: u32)", "fn listener_address(index: u32)"),
         ("Ipv4Addr::from(base)", "Ipv4Addr::from(base + index - 1)"),
     )
     for old, new in changes:

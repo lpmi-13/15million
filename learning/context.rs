@@ -8,7 +8,7 @@ struct Context {
     // TODO (step 5): Add fd_server and fd_client as i32 fields.
 }
 
-fn listener_address(index: u32) -> Ipv4Addr {
+fn listener_address(_index: u32) -> Ipv4Addr {
     let base = u32::from(Ipv4Addr::new(10, 0, 0, 1));
     // TODO (step 5): Return the address for this 1-based listener index.
     Ipv4Addr::from(base)

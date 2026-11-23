@@ -6,55 +6,7 @@
       "body": "8571429",
       "index": 8571428,
       "ip": "10.130.202.37",
-      "latency_ms": 1.732,
-      "ok": true,
-      "status": 200
-    },
-    {
-      "body": "10714286",
-      "index": 10714285,
-      "ip": "10.163.124.174",
-      "latency_ms": 1.741,
-      "ok": true,
-      "status": 200
-    },
-    {
-      "body": "12857143",
-      "index": 12857142,
-      "ip": "10.196.47.55",
-      "latency_ms": 1.739,
-      "ok": true,
-      "status": 200
-    },
-    {
-      "body": "2142858",
-      "index": 2142857,
-      "ip": "10.32.178.138",
-      "latency_ms": 2.096,
-      "ok": true,
-      "status": 200
-    },
-    {
-      "body": "15000000",
-      "index": 14999999,
-      "ip": "10.228.225.192",
-      "latency_ms": 1.734,
-      "ok": true,
-      "status": 200
-    },
-    {
-      "body": "6428572",
-      "index": 6428571,
-      "ip": "10.98.23.156",
-      "latency_ms": 1.999,
-      "ok": true,
-      "status": 200
-    },
-    {
-      "body": "1",
-      "index": 0,
-      "ip": "10.0.0.1",
-      "latency_ms": 2.923,
+      "latency_ms": 2.782,
       "ok": true,
       "status": 200
     },
@@ -62,7 +14,31 @@
       "body": "4285715",
       "index": 4285714,
       "ip": "10.65.101.19",
-      "latency_ms": 2.107,
+      "latency_ms": 3.197,
+      "ok": true,
+      "status": 200
+    },
+    {
+      "body": "2142858",
+      "index": 2142857,
+      "ip": "10.32.178.138",
+      "latency_ms": 3.667,
+      "ok": true,
+      "status": 200
+    },
+    {
+      "body": "6428572",
+      "index": 6428571,
+      "ip": "10.98.23.156",
+      "latency_ms": 3.203,
+      "ok": true,
+      "status": 200
+    },
+    {
+      "body": "10714286",
+      "index": 10714285,
+      "ip": "10.163.124.174",
+      "latency_ms": 2.785,
       "ok": true,
       "status": 200
     },
@@ -70,7 +46,7 @@
       "body": "1",
       "index": 0,
       "ip": "10.0.0.1",
-      "latency_ms": 1.703,
+      "latency_ms": 6.659,
       "ok": true,
       "status": 200
     },
@@ -78,7 +54,23 @@
       "body": "1",
       "index": 0,
       "ip": "10.0.0.1",
-      "latency_ms": 1.768,
+      "latency_ms": 1.919,
+      "ok": true,
+      "status": 200
+    },
+    {
+      "body": "12857143",
+      "index": 12857142,
+      "ip": "10.196.47.55",
+      "latency_ms": 3.021,
+      "ok": true,
+      "status": 200
+    },
+    {
+      "body": "15000000",
+      "index": 14999999,
+      "ip": "10.228.225.192",
+      "latency_ms": 3.753,
       "ok": true,
       "status": 200
     },
@@ -86,7 +78,7 @@
       "body": "1",
       "index": 0,
       "ip": "10.0.0.1",
-      "latency_ms": 1.638,
+      "latency_ms": 2.869,
       "ok": true,
       "status": 200
     },
@@ -94,7 +86,15 @@
       "body": "1",
       "index": 0,
       "ip": "10.0.0.1",
-      "latency_ms": 1.702,
+      "latency_ms": 2.617,
+      "ok": true,
+      "status": 200
+    },
+    {
+      "body": "1",
+      "index": 0,
+      "ip": "10.0.0.1",
+      "latency_ms": 3.036,
       "ok": true,
       "status": 200
     }

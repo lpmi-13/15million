@@ -5,7 +5,7 @@ set -euo pipefail
 run_id="${1:?usage: remote_image_test.sh PLAYGROUND_RUN_ID}"
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 report="$root/harness/reports/image-15m"
-rootfs_image="${ROOTFS_IMAGE:-ghcr.io/lpmi-13/15million-rootfs:v9}"
+rootfs_image="${ROOTFS_IMAGE:-ghcr.io/lpmi-13/15million-rootfs:v10}"
 image_id="$(docker image inspect "$rootfs_image" --format '{{.Id}}')"
 image_digest="$(docker buildx imagetools inspect "$rootfs_image" --format '{{.Manifest.Digest}}')"
 [[ "$image_digest" == sha256:* ]] || { echo "Could not resolve the pushed image digest." >&2; exit 1; }
@@ -41,7 +41,7 @@ if client python3 /opt/15m-lab/tasks/verify_runtime.py >/dev/null 2>&1; then
   echo "runtime grader unexpectedly passed before startup" >&2; exit 1
 fi
 
-learner 'cd ~/15m-work; cc -O2 -Wall -Wextra -Werror -std=c11 server.c -o server; ./server' && {
+learner 'cc -O2 -Wall -Wextra -Werror -std=c11 /home/laborant/15m-work/server.c -o /home/laborant/15m-work/server; /home/laborant/15m-work/server' && {
   echo "The C starter unexpectedly accepted connections" >&2; exit 1;
 }
 edit baseline
@@ -50,13 +50,7 @@ server systemd-run --unit baseline-image-test --uid laborant \
 server python3 /opt/15m-lab/tasks/verify_baseline.py
 server systemctl stop baseline-image-test
 
-if learner 'cd ~/15m-work; for i in $(seq 1 15_000_000); do echo $i; ./server &; done'; then
-  echo 'The literal article loop unexpectedly parsed in Bash.' >&2; exit 1
-fi
-if learner 'seq 1 15_000_000'; then
-  echo 'The literal seq argument unexpectedly worked.' >&2; exit 1
-fi
-learner "cd ~/15m-work; sudo /opt/15m-lab/toolbox/bounded.sh article 'for ((i=1; i<=15000000; i++)); do echo \"\$i\"; ./server & done; wait'"
+learner "sudo /opt/15m-lab/toolbox/bounded.sh article 'for ((i=1; i<=15000000; i++)); do echo \"\$i\"; /home/laborant/15m-work/server & done; wait'"
 learner sudo ip netns add 15m-ports
 learner sudo ip -n 15m-ports link set lo up
 learner 'sudo ip netns exec 15m-ports /opt/15m-lab/baseline/bin/port_exhaust 15000000 > /tmp/15m-port.json 2>/tmp/15m-port.err; status=$?; jq -r .count /tmp/15m-port.json; printf "program exited with error %s\n" "$status"; test "$status" -eq 1'
@@ -76,18 +70,15 @@ server systemd-run --unit 15m-image-index-1 --uid laborant /home/laborant/15m-wo
 server systemd-run --unit 15m-image-index-2 --uid laborant /home/laborant/15m-work/server 2
 server python3 /opt/15m-lab/tasks/verify_indexed.py
 server systemctl stop 15m-image-index-1 15m-image-index-2
-if learner 'cd ~/15m-work; for i in $(seq 1 15_000_000); do echo $i; ./server $i &; done'; then
-  echo 'The literal indexed article loop unexpectedly parsed in Bash.' >&2; exit 1
-fi
-learner "cd ~/15m-work; sudo /opt/15m-lab/toolbox/bounded.sh process 'for ((i=1; i<=15000000; i++)); do echo \"\$i\"; ./server \"\$i\" & done; wait'"
+learner "sudo /opt/15m-lab/toolbox/bounded.sh process 'for ((i=1; i<=15000000; i++)); do echo \"\$i\"; /home/laborant/15m-work/server \"\$i\" & done; wait'"
 server python3 /opt/15m-lab/tasks/verify_evidence.py process
-learner 'cd ~/15m-work; rustc context.rs -o context; ./context' && {
+learner 'rustc /home/laborant/15m-work/context.rs -o /home/laborant/15m-work/context; /home/laborant/15m-work/context' && {
   echo "The Rust starter unexpectedly passed its assertions" >&2; exit 1;
 }
 edit rust
-learner 'cd ~/15m-work; ./context'
+learner /home/laborant/15m-work/context
 server python3 /opt/15m-lab/tasks/verify_rust.py
-learner "cd ~/15m-lab/baseline/bin; sudo /opt/15m-lab/toolbox/bounded.sh socket './socket_cost 10000000'"
+learner "sudo /opt/15m-lab/toolbox/bounded.sh socket '/opt/15m-lab/baseline/bin/socket_cost 10000000'"
 server python3 /opt/15m-lab/tasks/verify_evidence.py socket
 
 learner sudo /opt/15m-lab/toolbox/runtime.sh start 1000

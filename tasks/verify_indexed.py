@@ -21,7 +21,8 @@ def check() -> str:
                 connection.sendall(b"GET / HTTP/1.0\r\n\r\n")
                 response = connection.recv(512)
         except OSError as error:
-            raise CheckFailed(f"{address}:8081 did not answer ({error}). Start ./server {index}.") from None
+            raise CheckFailed(f"{address}:8081 did not answer ({error}). "
+                              f"Start /home/laborant/15m-work/server {index}.") from None
         if not response.startswith(b"HTTP/1.0 200 OK\r\n") or not response.endswith(
             f"\r\n\r\n{index}".encode()
         ):

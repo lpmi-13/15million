@@ -134,22 +134,41 @@ client-01 (2 CPUs, 2 GiB) ── 172.16.0.0/24 ── dev-01 (4 CPUs, 10 GiB)
        TCP probes          10/8 via dev-01        TUN → smoltcp → HTTP task
 ```
 
-The read-only lab files are in `~/15m-lab` on both VMs. Edit the starter code in `~/15m-work` on the server VM.
+The read-only lab files are in `/opt/15m-lab` on both VMs, and `~/15m-lab` is a link to that directory.
+The starter code that you edit is in `/home/laborant/15m-work` on the server VM.
+The commands use absolute paths, so you can run them from any directory.
 Run the commands in steps 1 to 5 in the **Server** tab (dev-01).
 Step 6 says which commands go to the **Client** tab (client-01).
 The privileged commands use fixed sudo rules. The process loops in steps 2 and 4 and the socket loop in step 5 run inside small memory cgroups, so the VM stays usable after each OOM kill. The wrapper prints the kernel's `memory.events` counter and saves a report in `/var/lib/15m-lab/runs/`.
 
 ## 1. First HTTP response
 
-Open `~/15m-work/server.c`. It creates a socket, accepts connections, and sends a small HTTP reply, but the `listen()` call is missing. Compile and run it once to see the error:
+Open `/home/laborant/15m-work/server.c`. It creates a socket, accepts connections, and sends a small HTTP reply, but the `listen()` call is missing. Compile and run it once to see the error:
 
 ```bash
-cd ~/15m-work
-cc -O2 -Wall -Wextra -Werror -std=c11 server.c -o server
-./server
+cc -O2 -Wall -Wextra -Werror -std=c11 /home/laborant/15m-work/server.c -o /home/laborant/15m-work/server
+/home/laborant/15m-work/server
 ```
 
-It prints `port=0`, then `accept: Invalid argument`. Add the article's `listen()` call at the step 1 TODO in `server.c`, before `getsockname()`:
+It prints:
+
+```text
+port=0
+accept: Invalid argument
+```
+
+The `listen()` call belongs at the step 1 TODO, before the `getsockname()` call:
+
+```c
+    // TODO (step 1): Call listen(server, 128) here and handle its error.
+
+    if (argc == 1) {
+        struct sockaddr_in address;
+        socklen_t length = sizeof(address);
+        if (getsockname(server, (struct sockaddr *)&address, &length) < 0) {
+```
+
+Replace the TODO comment with the article's `listen()` call:
 
 ```c
 if (listen(server, 128) < 0) { perror("listen"); return 1; }
@@ -158,15 +177,21 @@ if (listen(server, 128) < 0) { perror("listen"); return 1; }
 Recompile the edited file, start the server, and send it a request:
 
 ```bash
-cc -O2 -Wall -Wextra -Werror -std=c11 server.c -o server
-PORT_FILE=/tmp/15m-baseline.port ./server >/tmp/15m-baseline.log 2>&1 &
+cc -O2 -Wall -Wextra -Werror -std=c11 /home/laborant/15m-work/server.c -o /home/laborant/15m-work/server
+PORT_FILE=/tmp/15m-baseline.port /home/laborant/15m-work/server >/tmp/15m-baseline.log 2>&1 &
 for _ in $(seq 1 20); do [ -s /tmp/15m-baseline.port ] && break; sleep 0.1; done
 cat /tmp/15m-baseline.log
-curl --noproxy '*' "http://127.0.0.1:$(cat /tmp/15m-baseline.port)/"
+curl --noproxy '*' -w '\n' "http://127.0.0.1:$(cat /tmp/15m-baseline.port)/"
 ```
 
-`curl` should print `ok`.
-Add `-i` to see the `HTTP/1.0 200 OK` status line as well.
+The log shows the port that Linux picked, and `curl` prints the response body. Your port number will differ:
+
+```text
+port=38407
+ok
+```
+
+Add `-i` to the `curl` command to see the `HTTP/1.0 200 OK` status line as well.
 
 ::simple-task
 ---
@@ -184,53 +209,116 @@ The program uses seven calls.
 `socket()` creates an unbound TCP socket.
 `listen()` makes Linux pick a free ephemeral port for it, and `getsockname()` reads that port back.
 `accept()`, `recv()`, `send()`, and `close()` then serve each request.
-To see them, run a second copy under `strace -e trace=network` and send it a request.
+To see them, run a second copy with `strace -e trace=network /home/laborant/15m-work/server` and send it a request.
 On x86-64, `strace` shows `recv()` and `send()` as `recvfrom()` and `sendto()`, because glibc implements them with those system calls.
 
 ## 2. How many unbound listeners fit?
 
-Try the first loop from the article in the **Server** tab. Copy it as printed:
+The article's first loop starts the no-argument server 15 million times. Each copy makes one unbound TCP listener. Run this version of the loop in the **Server** tab:
 
 ```bash
-cd ~/15m-work
-for i in $(seq 1 15_000_000); do echo $i; ./server &; done
+sudo /opt/15m-lab/toolbox/bounded.sh article 'for ((i=1; i<=15000000; i++)); do echo "$i"; /home/laborant/15m-work/server & done; wait'
 ```
 
-Bash stops at `&;` with `syntax error near unexpected token ';'`. It has not run `seq` or started a server. Check the second problem separately:
+> This command differs from the article's loop in three ways.
+> Bash rejects the article's `&;`, so `&` alone ends each command here.
+> GNU `seq` rejects the underscores in `15_000_000`, so Bash's arithmetic `for` counts to 15,000,000 instead. It also avoids building a 15-million-word list before the first server starts.
+> The `bounded.sh` wrapper runs the loop in a 32 MiB memory cgroup, so the VM stays usable when the memory runs out.
 
-```bash
-seq 1 15_000_000
+The loop reaches the process-memory limit before it runs out of ports.
+The wrapper first prints a `Killed` message for the loop's shell. On the test VM, the output ended like this:
+
+```text
+136
+port=52579
+137
+port=46695
+port=57573
+port=57923
+port=59383
+port=40821
+memory.peak=33554432 bytes; memory.events oom_kill=2
+Out of memory
+report=/var/lib/15m-lab/runs/1795450609-1050/article.json
 ```
 
-GNU `seq` rejects the underscores. The article's `28232` result cannot come from that literal Bash command. The no-argument `./server` does make an unbound TCP listener. Run a corrected loop with the article's 15,000,000 upper bound inside a 32 MiB cgroup. Bash's arithmetic `for` avoids building a 15-million-word `$(seq ...)` expansion before the servers start. The loop reaches the process-memory limit first:
+The numbers are the last indexes that the loop attempted. Each `port=` line comes from a server that started and got an ephemeral port.
+A non-zero `oom_kill` counter means that the kernel killed processes in the cgroup when it ran out of memory.
+This is why a loop that starts a process for each listener does not isolate the port limit on this VM.
 
-```bash
-sudo /opt/15m-lab/toolbox/bounded.sh article 'for ((i=1; i<=15000000; i++)); do echo "$i"; ./server & done; wait'
+Now we'll use a different approach to keep all the listeners in one C process and measure the port limit alone. This is the main loop of `/opt/15m-lab/baseline/port_exhaust.c`:
+
+```c
+while (count < requested) {
+    if (count == capacity) {
+        fprintf(stderr, "the descriptor array filled before ports ran out\n");
+        break;
+    }
+    int fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd < 0) { failed_errno = errno; syscall_name = "socket"; break; }
+    if (listen(fd, 1) < 0) {
+        failed_errno = errno;
+        syscall_name = "listen";
+        close(fd);
+        break;
+    }
+    fds[count++] = fd;
+}
 ```
 
-The wrapper shows the last indexes attempted, the cgroup's `oom_kill` counter, and `Out of memory`. This is why a loop that starts a process for each listener does not isolate the port limit on this VM.
+`requested` is the command-line argument, which is 15,000,000 here. Each iteration calls `socket()` and `listen()` without `bind()`, then keeps the open socket in `fds`. The loop stops as soon as `listen()` fails.
 
-Now keep all the listeners in one C process and measure the port limit alone. Read `baseline/port_exhaust.c`. Its loop has an upper bound of 15,000,000 iterations. Each iteration calls `socket()` and `listen()` without `bind()`, then keeps the successful socket open. It stops as soon as `listen()` fails. Run it in a fresh network namespace so no other program uses a port from that namespace:
+::remark-box
+The `port_exhaust` command takes about 25 seconds and prints nothing until it finishes, because its output goes to files.
+Each implicit bind searches the range for a free port, so each `listen()` call is slower than the one before it.
+::
+
+Run it in a fresh network namespace so that no other program uses a port from that namespace:
 
 ```bash
-sysctl net.ipv4.ip_local_port_range
 sudo ip netns add 15m-ports
 sudo ip -n 15m-ports link set lo up
 sudo ip netns exec 15m-ports /opt/15m-lab/baseline/bin/port_exhaust 15000000 > /tmp/15m-port.json 2>/tmp/15m-port.err
 status=$?
-jq -r '.count' /tmp/15m-port.json
-printf 'program exited with error %s\n' "$status"
 sudo ip netns del 15m-ports
 ```
 
-With the test VM's `32768 60999` range, the two printed lines should be:
+Check the listener count and the exit status of `port_exhaust`:
+
+```bash
+jq -r '.count' /tmp/15m-port.json
+printf 'program exited with error %s\n' "$status"
+```
+
+With the test VM's port range, the two lines are:
 
 ```text
 28232
 program exited with error 1
 ```
 
-The count and exit code come from the real C run. The loop was allowed to attempt 15,000,000 listeners, but it stopped at the first port failure. Read `/tmp/15m-port.err` to see `listen: Address already in use`. The JSON file also records `maximum: 15000000`, `range_low`, `range_high`, `failed_syscall`, and `errno`.
+Then check the port range, the error message, and the full JSON report:
+
+```bash
+sysctl net.ipv4.ip_local_port_range
+cat /tmp/15m-port.err
+jq . /tmp/15m-port.json
+```
+
+On the test VM, the output was:
+
+```text
+net.ipv4.ip_local_port_range = 32768	60999
+listen: Address already in use
+{
+  "range_low": 32768,
+  "range_high": 60999,
+  "count": 28232,
+  "maximum": 15000000,
+  "failed_syscall": "listen",
+  "errno": 98
+}
+```
 
 ::simple-task
 ---
@@ -244,7 +332,6 @@ Waiting for a port probe report that ends in port exhaustion...
 The probe ran out of ephemeral ports.
 ::
 
-On the test VM, `ip_local_port_range` was `32768 60999`.
 The C loop held 28,232 listeners, and then `listen()` failed with `errno` 98 (`EADDRINUSE`).
 That count is the full width of the range: 60999 - 32768 + 1 = 28,232.
 Every implicit bind takes one port from this range, so one address cannot hold more implicitly bound listeners than the range is wide.
@@ -272,14 +359,19 @@ One binds `2001:db8:1234:5678::1`, and the other binds `2001:db8:1234:5678::2`.
 ```bash
 sudo ip -6 route add local 2001:db8:1234:5678::/64 dev lo
 sudo sysctl -w net.ipv6.ip_nonlocal_bind=1
-cd ~/15m-lab/baseline/bin
-./bound_server 2001:db8:1234:5678::1 8081 alpha &
-./bound_server 2001:db8:1234:5678::2 8081 beta &
-curl -g -6 --noproxy '*' 'http://[2001:db8:1234:5678::1]:8081/'
-curl -g -6 --noproxy '*' 'http://[2001:db8:1234:5678::2]:8081/'
+/opt/15m-lab/baseline/bin/bound_server 2001:db8:1234:5678::1 8081 alpha &
+/opt/15m-lab/baseline/bin/bound_server 2001:db8:1234:5678::2 8081 beta &
+curl -g -6 --noproxy '*' -w '\n' 'http://[2001:db8:1234:5678::1]:8081/'
+curl -g -6 --noproxy '*' -w '\n' 'http://[2001:db8:1234:5678::2]:8081/'
 ```
 
-The two replies should be `alpha` and `beta`.
+`sysctl` confirms the new setting, and each address answers with its own reply:
+
+```text
+net.ipv6.ip_nonlocal_bind = 1
+alpha
+beta
+```
 
 ::simple-task
 ---
@@ -309,7 +401,20 @@ The runtime in step 6 uses the same idea with private IPv4 addresses.
 ## 4. One process per address
 
 Predict the memory cost if every address gets its own Linux process.
-Return to your editable `~/15m-work/server.c`. Its indexed mode currently binds every process to the same `127.0.0.1:8081` address. Change the step 4 TODO to shift the base address by the command-line index, as the article does:
+Return to your editable `/home/laborant/15m-work/server.c`. With an index argument, it binds to a fixed address. This is its indexed mode with the step 4 TODO:
+
+```c
+    if (argc == 2) {
+        struct sockaddr_in address = {.sin_family = AF_INET, .sin_port = htons(8081)};
+        // TODO (step 4): Shift the base address by index, as in the article.
+        address.sin_addr.s_addr = htonl(0x7f000001u);
+        if (bind(server, (struct sockaddr *)&address, sizeof(address)) < 0) {
+            perror("bind"); return 1;
+        }
+    }
+```
+
+`0x7f000001` is `127.0.0.1`, so every indexed process binds the same `127.0.0.1:8081` address. Change the line under the TODO to shift the base address by the index, as the article does:
 
 ```c
 address.sin_addr.s_addr = htonl(0x7f000001u + (uint32_t)index);
@@ -318,16 +423,20 @@ address.sin_addr.s_addr = htonl(0x7f000001u + (uint32_t)index);
 The first two indexes now use `127.0.0.2` and `127.0.0.3`. Compile your change and start one server on each address:
 
 ```bash
-cd ~/15m-work
-cc -O2 -Wall -Wextra -Werror -std=c11 server.c -o server
-./server 1 & first_pid=$!
-./server 2 & second_pid=$!
+cc -O2 -Wall -Wextra -Werror -std=c11 /home/laborant/15m-work/server.c -o /home/laborant/15m-work/server
+/home/laborant/15m-work/server 1 & first_pid=$!
+/home/laborant/15m-work/server 2 & second_pid=$!
 sleep 0.2
-curl --noproxy '*' http://127.0.0.2:8081/
-curl --noproxy '*' http://127.0.0.3:8081/
+curl --noproxy '*' -w '\n' 'http://127.0.0.2:8081/'
+curl --noproxy '*' -w '\n' 'http://127.0.0.3:8081/'
 ```
 
-The replies should be `1` and `2`.
+Each server replies with its index:
+
+```text
+1
+2
+```
 
 ::simple-task
 ---
@@ -347,21 +456,59 @@ Once the check completes, stop those two test servers so they do not occupy addr
 kill "$first_pid" "$second_pid"
 ```
 
-Try the article's second loop as printed. It has the same `&;` and underscore syntax problems as the first one:
+The article's second loop passes the index to each server. Run this version of it with a **15,000,000 upper bound**:
 
 ```bash
-cd ~/15m-work
-for i in $(seq 1 15_000_000); do echo $i; ./server $i &; done
+sudo /opt/15m-lab/toolbox/bounded.sh process 'for ((i=1; i<=15000000; i++)); do echo "$i"; /home/laborant/15m-work/server "$i" & done; wait'
 ```
 
-Now run the corrected `./server "$i" &` loop with a **15,000,000 upper bound** inside a 32 MiB cgroup. Bash's arithmetic `for` avoids expanding 15 million words before any server starts. The wrapper runs the loop as `laborant`, limits it to 45 seconds and 400 processes, and removes the whole group when the kernel records an OOM kill.
+> This command differs from the article's loop for the same reasons as the loop in step 2.
+> Bash rejects `&;`, GNU `seq` rejects `15_000_000`, and the wrapper keeps the loop in a 32 MiB cgroup.
+> The wrapper also runs the loop as `laborant`, limits it to 45 seconds and 400 processes, and removes the whole group when the kernel records an OOM kill.
+
+After the `Killed` message, the output on the test VM ended like this:
+
+```text
+161
+162
+163
+164
+165
+166
+167
+168
+memory.peak=33554432 bytes; memory.events oom_kill=2
+Out of memory
+report=/var/lib/15m-lab/runs/1795450688-1265/process.json
+```
+
+The last line is the path of a JSON report. Read the report with `jq`:
 
 ```bash
-cd ~/15m-work
-sudo /opt/15m-lab/toolbox/bounded.sh process 'for ((i=1; i<=15000000; i++)); do echo "$i"; ./server "$i" & done; wait'
+jq . /var/lib/15m-lab/runs/*/process.json
 ```
 
-The tail of the output shows the last indexes attempted, the cgroup's peak memory, `oom_kill=1` or higher, and `Out of memory`. Read the report path printed by the wrapper to calculate an approximate memory cost per server. The count is approximate because several forks can race with the OOM kill.
+If you ran the loop more than once, `jq` prints one report for each run. The report from the test VM was:
+
+```json
+{
+  "schema": 1,
+  "kind": "process",
+  "unix_time": 1795450688,
+  "cgroup_limit": 33554432,
+  "memory_peak": 33554432,
+  "observed_count": 168,
+  "requested_count": 0,
+  "bytes_per_item_estimate": 199728.7619047619,
+  "slab_peak_observed": 3746144,
+  "events": {
+    "oom_kill": 2
+  },
+  "ok": true
+}
+```
+
+`bytes_per_item_estimate` is the peak memory divided by the last index. The estimate is approximate because several forks can race with the OOM kill.
 
 ::simple-task
 ---
@@ -375,40 +522,80 @@ Waiting for a process probe report with a cgroup OOM kill...
 The process probe reached its memory limit.
 ::
 
-On one test run, this loop reached index 179 before the 32 MiB OOM kill. Dividing the limit by that index gives roughly 190 KB per attempt, or about 2.8 TB for 15 million processes. This is only a rough projection: the last index is not a count of live processes, and Bash and cgroup bookkeeping also use memory. Your result can differ with the executable, shared pages, kernel, and allocator.
+On the test run above, the loop reached index 168 before the 32 MiB OOM kill. That is roughly 200 KB per attempt, or about 3 TB for 15 million processes. This is only a rough projection: the last index is not a count of live processes, and Bash and cgroup bookkeeping also use memory. Your result can differ with the executable, shared pages, kernel, and allocator.
 The OOM kill stays inside the probe's cgroup.
 
 ## 5. Do idle kernel sockets cost nothing?
 
-The article sketches a Rust `Context` with a program counter and two file descriptors. Open `~/15m-work/context.rs`. The starter program checks the context size and calculates the first, middle, and last listener addresses. Compile and run it before editing:
+The article sketches a Rust `Context` with a program counter and two file descriptors. Open `/home/laborant/15m-work/context.rs`. The starter program checks the context size and calculates the first, middle, and last listener addresses. Compile and run it before editing:
 
 ```bash
-cd ~/15m-work
-rustc context.rs -o context
-./context
+rustc /home/laborant/15m-work/context.rs -o /home/laborant/15m-work/context
+/home/laborant/15m-work/context
 ```
 
-It panics because the context is only eight bytes. Add the two missing fields to `struct Context`:
+It panics because the context is only eight bytes:
+
+```text
+thread 'main' panicked at /home/laborant/15m-work/context.rs:19:5:
+assertion `left == right` failed: add both file descriptor fields
+  left: 8
+ right: 16
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+```
+
+This is the starter's `struct Context`:
+
+```rust
+struct Context {
+    pc: u64,
+    // TODO (step 5): Add fd_server and fd_client as i32 fields.
+}
+```
+
+Replace the TODO comment with the two missing fields:
 
 ```rust
 fd_server: i32,
 fd_client: i32,
 ```
 
-Then make `listener_address()` shift the base address by the 1-based listener index:
+Then find `listener_address()`:
 
 ```rust
-Ipv4Addr::from(base + index - 1)
+fn listener_address(_index: u32) -> Ipv4Addr {
+    let base = u32::from(Ipv4Addr::new(10, 0, 0, 1));
+    // TODO (step 5): Return the address for this 1-based listener index.
+    Ipv4Addr::from(base)
+}
+```
+
+The starter does not use its parameter yet. The leading underscore in `_index` tells the Rust compiler that this is on purpose, so the first compile prints no warning.
+Rename the parameter to `index`, and shift the base address by the 1-based listener index:
+
+```rust
+fn listener_address(index: u32) -> Ipv4Addr {
+    let base = u32::from(Ipv4Addr::new(10, 0, 0, 1));
+    Ipv4Addr::from(base + index - 1)
+}
 ```
 
 Compile and run your Rust code again:
 
 ```bash
-rustc context.rs -o context
-./context
+rustc /home/laborant/15m-work/context.rs -o /home/laborant/15m-work/context
+/home/laborant/15m-work/context
 ```
 
-It should print `context_bytes=16`, `all_contexts_bytes=240000000`, and these address mappings: `1 -> 10.0.0.1`, `7500000 -> 10.114.112.224`, and `15000000 -> 10.228.225.192`.
+It should print:
+
+```text
+context_bytes=16
+all_contexts_bytes=240000000
+1 -> 10.0.0.1
+7500000 -> 10.114.112.224
+15000000 -> 10.228.225.192
+```
 
 ::simple-task
 ---
@@ -422,16 +609,73 @@ Waiting for your compiled Rust context and address calculation...
 The Rust context and addresses are correct.
 ::
 
-Your Rust program models the article's context. The full runtime in step 6 has its own 16-byte `Task` layout in `runtime/src/worker.rs`.
+Your Rust program models the article's context. The full runtime in step 6 has its own 16-byte `Task` layout.
 Now predict whether **unbound, idle kernel TCP sockets** cost any memory.
-Read `baseline/socket_cost.c`. It follows the article's 10,000,000-socket loop. It creates TCP sockets without calling `listen()`, so it cannot run out of ports. Run it in a **64 MiB** cgroup and watch the kernel memory counter rise.
+This is the main loop of `/opt/15m-lab/baseline/socket_cost.c`:
 
-```bash
-cd ~/15m-lab/baseline/bin
-sudo /opt/15m-lab/toolbox/bounded.sh socket './socket_cost 10000000'
+```c
+while (count < requested) {
+    if (count == capacity) {
+        fprintf(stderr, "the descriptor array filled before memory ran out\n");
+        error = EMFILE;
+        break;
+    }
+    int fd = socket(AF_INET, SOCK_STREAM, 0); /* deliberately unbound */
+    if (fd < 0) { error = errno; break; }
+    fds[count++] = fd;
+    if (count % 1000 == 0) { printf("count=%zu\n", count); fflush(stdout); }
+}
 ```
 
-The C program prints `count=1000`, `count=2000`, and so on. The wrapper prints the last few counts, `memory.peak`, the `oom_kill` counter, and `Out of memory`. Its report includes `slab_peak_observed`.
+It follows the article's 10,000,000-socket loop. It creates TCP sockets without calling `listen()`, so it cannot run out of ports. It prints a `count=` line every 1,000 sockets. Run it in a **64 MiB** cgroup:
+
+```bash
+sudo /opt/15m-lab/toolbox/bounded.sh socket '/opt/15m-lab/baseline/bin/socket_cost 10000000'
+```
+
+After the `Killed` message, the output on the test VM ended like this:
+
+```text
+count=11000
+count=12000
+count=13000
+count=14000
+count=15000
+count=16000
+count=17000
+count=18000
+memory.peak=67108864 bytes; memory.events oom_kill=3
+Out of memory
+report=/var/lib/15m-lab/runs/1795450704-1501/socket.json
+```
+
+Read the report with `jq`:
+
+```bash
+jq . /var/lib/15m-lab/runs/*/socket.json
+```
+
+The report from the test VM was:
+
+```json
+{
+  "schema": 1,
+  "kind": "socket",
+  "unix_time": 1795450704,
+  "cgroup_limit": 67108864,
+  "memory_peak": 67108864,
+  "observed_count": 18000,
+  "requested_count": 10000000,
+  "bytes_per_item_estimate": 3728.2702222222224,
+  "slab_peak_observed": 66733856,
+  "events": {
+    "oom_kill": 3
+  },
+  "ok": true
+}
+```
+
+`slab_peak_observed` is the highest kernel slab memory that the wrapper saw in the cgroup.
 
 ::simple-task
 ---
@@ -447,21 +691,48 @@ The idle sockets filled the probe's memory limit.
 
 The task records take 240,000,000 bytes, which is about 229 MiB.
 Idle kernel sockets cost far more per entry.
-On the test VM, the cgroup hit its limit at about 18,000 sockets, which is about 3.7 KiB per socket.
+On the test VM, the cgroup hit its limit at about 18,000 sockets, which is about 3.7 KB per socket.
 Most of that memory was kernel slab.
 The probe prints its count every 1,000 sockets, so the real count at the OOM kill was a little higher.
-At 3.7 KiB each, 15 million kernel sockets would need about 56 GB.
+At 3.7 KB each, 15 million kernel sockets would need about 56 GB.
 This is why the listeners in step 6 live in user space.
 
 ## 6. Fifteen million listeners in one process
 
-The runtime in `runtime/src/` is a Rust program built on [`smoltcp`](https://github.com/smoltcp-rs/smoltcp), a TCP/IP stack that runs in user space.
+The runtime in `/opt/15m-lab/runtime/src/` is a Rust program built on [`smoltcp`](https://github.com/smoltcp-rs/smoltcp), a TCP/IP stack that runs in user space.
 On dev-01, Linux routes `10.0.0.0/8` to a TUN device called `smolbench`.
 The runtime reads and writes raw IP packets on that device.
 Each address has a 16-byte `Task` record and a `smoltcp` TCP listening socket with 48-byte receive and transmit buffers.
+These are the parts of `/opt/15m-lab/runtime/src/worker.rs` that define them:
+
+```rust
+const BUFFER_SIZE: usize = 48;
+
+pub(crate) struct Task {
+    phase: u32,
+    pending: u32,
+    requests: u64,
+}
+const _: () = assert!(std::mem::size_of::<Task>() == 16);
+
+pub(crate) struct Resident {
+    sockets: SocketSet<'static>,
+}
+const _: () = assert!(std::mem::size_of::<Resident>() == 24);
+
+fn fresh_socket_set() -> SocketSet<'static> {
+    let mut set = SocketSet::new(Vec::with_capacity(1));
+    set.add(Socket::new(
+        SocketBuffer::new(vec![0; BUFFER_SIZE]),
+        SocketBuffer::new(vec![0; BUFFER_SIZE]),
+    ));
+    set
+}
+```
+
+A `Resident` holds the set with the one listening socket of its address.
 A packet selects its listener by destination address, and the response body is the listener's number, starting from 1.
 State for a connection exists only while the connection is open.
-Read `runtime/src/worker.rs` to see the layout.
 
 The runtime serves one fixed HTTP response.
 It does not run compiled C programs or intercept their system calls.
@@ -471,19 +742,59 @@ In the **Server** tab, start 1,000 listeners and check the status:
 
 ```bash
 sudo /opt/15m-lab/toolbox/runtime.sh start 1000
-sudo /opt/15m-lab/toolbox/runtime.sh status
+sudo /opt/15m-lab/toolbox/runtime.sh status | jq .
+```
+
+The status is a JSON object. On the test VM, the output was:
+
+```text
+Started 1000 listeners. Watch: journalctl -fu 15m-runtime.service
+{
+  "accepted": 0,
+  "backend": "tun",
+  "base": "10.0.0.1",
+  "cgroup": {
+    "exe": "/opt/15m-lab/bin/million-listeners",
+    "exe_sha256": "340b9cfc26083d8955250b4d15d54fecbf457abfd4053d122dda9b7103b908c8",
+    "memory_current": "1642496",
+    "memory_events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+    "memory_max": "9663676416",
+    "memory_peak": "1961984",
+    "path": "/sys/fs/cgroup/system.slice/15m-runtime.service",
+    "pss_bytes": 1333248,
+    "rss_bytes": 3018752,
+    "vm_mem_available_kib": 9891276,
+    "vm_mem_total_kib": 10264988
+  },
+  "initialized": 1000,
+  "last": "10.0.3.232",
+  "listener_bytes": 24,
+  "pid": 1556,
+  "port": 8080,
+  "ready": true,
+  "requested": 1000,
+  "startup_ms": 0,
+  "task_bytes": 16
+}
 ```
 
 When the status shows `"ready": true`, request the first and last listeners from the **Client** tab:
 
 ```bash
-curl --noproxy '*' http://10.0.0.1:8080/
-curl --noproxy '*' http://10.0.3.232:8080/
+curl --noproxy '*' -w '\n' 'http://10.0.0.1:8080/'
+curl --noproxy '*' -w '\n' 'http://10.0.3.232:8080/'
 ```
 
-The responses should be `1` and `1000`. Repeat the server start with `100000` and `1000000`, then request their last addresses, `10.1.134.160` and `10.15.66.64`. The check at the end of the tutorial also samples other addresses and rejects an address beyond the range.
+The responses are the listener numbers:
 
-Note the `memory_peak` value in the status output for each count.
+```text
+1
+1000
+```
+
+Repeat the server start with `100000` and `1000000`, then request their last addresses, `10.1.134.160` and `10.15.66.64`. They answer `100000` and `1000000`. The check at the end of the tutorial also samples other addresses and rejects an address beyond the range.
+
+Note the `memory_peak` value in the `cgroup` part of the status output for each count.
 On the test VM, the 1,000,000-listener run peaked at about 618 MB, which is about 618 bytes per listener.
 Projected to 15 million, that is about 9.3 GB.
 The runtime runs in a systemd service with `MemoryMax=9G` (9,663,676,416 bytes), which leaves room for the rest of the VM.
@@ -496,20 +807,40 @@ Do not build anything during the run, because a build needs memory that the run 
 
 ```bash
 sudo /opt/15m-lab/toolbox/runtime.sh start 15000000
-sudo /opt/15m-lab/toolbox/runtime.sh status
+sudo /opt/15m-lab/toolbox/runtime.sh status | jq .
 journalctl -u 15m-runtime.service -n 20 --no-pager
 ```
 
 The start takes about 5 to 15 seconds.
+Run the `status` command again until it shows `"ready": true` and `"initialized": 15000000`.
+The journal shows the listener count as it grows. On the test VM, its last lines were:
+
+```text
+Nov 23 16:18:43 dev-01 systemd[1]: Started 15m-runtime.service - 15 million smoltcp HTTP listeners.
+Nov 23 16:18:43 dev-01 million-listeners[1573]: initialized=1000
+Nov 23 16:18:43 dev-01 million-listeners[1573]: initialized=100000
+Nov 23 16:18:44 dev-01 million-listeners[1573]: initialized=1000000
+Nov 23 16:18:47 dev-01 million-listeners[1573]: initialized=5000000
+Nov 23 16:18:50 dev-01 million-listeners[1573]: initialized=10000000
+Nov 23 16:18:54 dev-01 million-listeners[1573]: initialized=15000000
+Nov 23 16:18:54 dev-01 million-listeners[1573]: resident_listeners_verified=15000000 rx_bytes=48 tx_bytes=48
+```
+
 When the status shows `"ready": true`, request three addresses in the **Client** tab:
 
 ```bash
-curl --noproxy '*' http://10.0.0.1:8080/
-curl --noproxy '*' http://10.114.112.224:8080/
-curl --noproxy '*' http://10.228.225.192:8080/
+curl --noproxy '*' -w '\n' 'http://10.0.0.1:8080/'
+curl --noproxy '*' -w '\n' 'http://10.114.112.224:8080/'
+curl --noproxy '*' -w '\n' 'http://10.228.225.192:8080/'
 ```
 
-The three responses should be `1`, `7500000`, and `15000000`.
+The responses are the first, middle, and last listener numbers:
+
+```text
+1
+7500000
+15000000
+```
 
 The last check runs on client-01.
 It reads the live process through a read-only status service on dev-01, and it checks the service's cgroup and the free memory of the VM.
@@ -534,11 +865,11 @@ All 15,000,000 listeners are up, and the sampled ones answered.
 :summary: "Hint: The runtime does not start"
 ---
 
-Read the service log with `journalctl -u 15m-runtime.service -n 50 --no-pager`, and check the status with `runtime.sh status`.
+Read the service log with `journalctl -u 15m-runtime.service -n 50 --no-pager`, and check the status with `sudo /opt/15m-lab/toolbox/runtime.sh status | jq .`.
 `Failed with result 'oom-kill'` means that the server VM has too little memory for the run.
 Compare `MemTotal` in `/proc/meminfo` with the 10 GiB that the full run needs.
 On client-01, `ip route get 10.0.0.1` should show `via 172.16.0.2`.
-To go back to the starting state, run `reset.sh` from `/opt/15m-lab/toolbox/` with `sudo`.
+To go back to the starting state, run `sudo /opt/15m-lab/toolbox/reset.sh`.
 It stops the lab services and moves the old reports to `/var/lib/15m-lab/archive/`.
 ::
 
@@ -550,8 +881,8 @@ The table compares the three ways to give every address its own listener.
 
 | Approach | Measured cost per address | Projected for 15 million |
 |---|---:|---:|
-| One Linux process | roughly 190 KB | roughly 2.8 TB |
-| One idle kernel socket | about 3.7 KiB | about 56 GB |
+| One Linux process | roughly 200 KB | roughly 3 TB |
+| One idle kernel socket | about 3.7 KB | about 56 GB |
 | One `smoltcp` listener in one process | about 617 bytes | about 9.3 GB |
 
 The result shows 15 million idle listeners in memory that answer sampled requests.
