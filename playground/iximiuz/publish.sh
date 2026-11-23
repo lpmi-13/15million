@@ -1,80 +1,97 @@
 #!/usr/bin/env bash
-# Publish only after a clean rootfs integration run and owner authorization.
+# Builds and pushes the next rootfs image, sets its tag in manifest.yaml, and updates the
+# registered playground. Modelled on rstudio-guide's iximiuz/publish-rootfs-image.sh.
 set -euo pipefail
+
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-tutorial_dir="$root/tutorials/15-million-web-servers-on-one-vm"
-[[ "${CONFIRM_PUBLISH:-}" == 1 ]] || { echo "Set CONFIRM_PUBLISH=1 after approving publication." >&2; exit 2; }
-[[ -n "${PLAYGROUND_NAME:-}" && -n "${TUTORIAL_NAME:-}" && -n "${ROOTFS_IMAGE:-}" ]] || {
-  echo "Set PLAYGROUND_NAME, TUTORIAL_NAME and a versioned ROOTFS_IMAGE." >&2; exit 2;
-}
-[[ "$PLAYGROUND_NAME" =~ ^[a-z0-9][a-z0-9-]*$ && "$TUTORIAL_NAME" =~ ^[a-z0-9][a-z0-9-]*$ ]] || {
-  echo "Registered names must be lowercase slugs." >&2; exit 2;
-}
-[[ "$ROOTFS_IMAGE" =~ ^ghcr\.io/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+:v[1-9][0-9]*$ ]] || {
-  echo "ROOTFS_IMAGE must be a versioned ghcr.io image." >&2; exit 2;
-}
-python3 "$root/harness/check_release.py"
-python3 "$root/harness/check_release.py" --dir "$root/harness/reports/image-15m"
-# The image must already have been pushed and tested in a fresh playground.
-# Rebuilding here would make the test report refer to a different artifact.
-tested_sha="$(python3 - "$root/harness/reports/image-15m/server.json" <<'PY'
-import json
-import sys
-print(json.load(open(sys.argv[1]))["cgroup"]["exe_sha256"])
-PY
-)"
-registry_digest="$(docker buildx imagetools inspect "$ROOTFS_IMAGE" --format '{{.Manifest.Digest}}')"
-python3 - "$root/harness/reports/image-15m/image-meta.json" "$ROOTFS_IMAGE" \
-  "$(docker image inspect "$ROOTFS_IMAGE" --format '{{.Id}}')" "$registry_digest" "$tested_sha" <<'PY'
-import json
-import sys
+manifest="$root/playground/iximiuz/manifest.yaml"
+image_repo="ghcr.io/lpmi-13/15million-rootfs"
+repo_re="${image_repo//./\\.}"
 
-meta = json.load(open(sys.argv[1]))
-if (meta["image_ref"], meta["image_id"], meta["image_digest"], meta["runtime_sha256"]) != tuple(sys.argv[2:]):
-    raise SystemExit("The rootfs image differs from the exact-image test report.")
-PY
-current_sha="$(docker run --rm --entrypoint sha256sum "$ROOTFS_IMAGE" \
-  /opt/15m-lab/bin/million-listeners)"
-current_sha="${current_sha%% *}"
-[[ "$current_sha" == "$tested_sha" ]] || {
-  echo "The local rootfs binary differs from the exact-image test report." >&2; exit 2;
-}
-stage="$(mktemp -d)"
-scaffold="$(mktemp -d)"
-trap 'rm -rf "$stage" "$scaffold"' EXIT
-python3 - "$root" "$tutorial_dir" "$stage" "$PLAYGROUND_NAME" "$ROOTFS_IMAGE" "$registry_digest" <<'PY'
-from pathlib import Path
-import re
-import shutil
-import sys
+usage() {
+  cat <<'EOF'
+Usage: playground/iximiuz/publish.sh [new-image-tag]
+       playground/iximiuz/publish.sh --sync-remote
 
-root, tutorial, stage, playground, image, digest = sys.argv[1:]
-root, tutorial, stage = Path(root), Path(tutorial), Path(stage)
-manifest = (root / "playground/iximiuz/manifest.yaml").read_text()
-if not re.search(rf"(?m)^name: {re.escape(playground)}$", manifest):
-    raise SystemExit("Local manifest does not name the registered playground.")
-# Both VMs must boot the tested image. The registered playground failed to start with
-# tag@sha256 drive sources (2026-11-21), so the manifest uses the tag, and the digest
-# check above ties that tag to the tested image.
-sources = re.findall(r"(?m)^\s*- source: (oci://\S+)$", manifest)
-allowed = {f"oci://{image}", f"oci://{image}@{digest}"}
-if len(sources) != 2 or not set(sources) <= allowed:
-    raise SystemExit(f"Local manifest drives {sources} do not reference the tested image.")
-(stage / "manifest.yaml").write_text(manifest)
-index = (tutorial / "index.md").read_text()
-if not re.search(rf"(?m)^  name: {re.escape(playground)}$", index):
-    raise SystemExit("Local tutorial does not reference the registered playground.")
-(stage / "index.md").write_text(index)
-(stage / "__static__").mkdir()
-shutil.copy2(tutorial / "__static__/cover.png", stage / "__static__/cover.png")
-PY
-labctl playground update "$PLAYGROUND_NAME" -f "$stage/manifest.yaml"
-rm "$stage/manifest.yaml"
-if [[ "${CONTENT_CREATE:-0}" == 1 ]]; then
-  # Create in a scratch folder so the scaffold cannot replace the staged files.
-  created_name="$(labctl content create tutorial "$TUTORIAL_NAME" --dir "$scaffold" --no-open -q)"
-  labctl content push tutorial "$created_name" --dir "$stage" --force
-  echo "Created tutorial: $created_name"
-else
-  labctl content push tutorial "$TUTORIAL_NAME" --dir "$stage" --force
+Builds and pushes the rootfs image, sets its tag in playground/iximiuz/manifest.yaml,
+and updates the registered playground from that manifest. Without a tag, it publishes
+the version after the one in manifest.yaml (v10 becomes v11).
+--sync-remote retries only the playground update.
+EOF
+}
+
+# Prints the tag that both drives in manifest.yaml use.
+current_tag() {
+  local sources tag
+  mapfile -t sources < <(sed -nE 's#^[[:space:]]*- source: oci://([^[:space:]]+)[[:space:]]*$#\1#p' "$manifest")
+  if [[ ${#sources[@]} -eq 2 ]]; then
+    tag="${sources[0]##*:}"
+    if [[ "${sources[0]}" == "$image_repo:$tag" && "${sources[1]}" == "${sources[0]}" ]]; then
+      printf '%s\n' "$tag"
+      return 0
+    fi
+  fi
+  echo "error: both drives in $manifest must use the same $image_repo:<tag> image." >&2
+  return 1
+}
+
+next_image_tag() {
+  if [[ ! "$1" =~ ^v([0-9]+)$ ]]; then
+    echo "error: cannot increment the image tag '$1'. Pass a new tag explicitly." >&2
+    return 1
+  fi
+  printf 'v%d\n' "$((10#${BASH_REMATCH[1]} + 1))"
+}
+
+set_manifest_tag() {
+  sed -i -E "s#(- source: oci://)${repo_re}:[A-Za-z0-9_.-]+#\\1${image_repo}:$1#" "$manifest"
+  [[ "$(current_tag)" == "$1" ]] || { echo "error: could not set $1 in $manifest." >&2; return 1; }
+}
+
+# Updates the registered playground from the checked-in manifest.
+sync_remote_playground() {
+  local name tag
+  name="$(awk '/^name:/ { print $2; exit }' "$manifest")"
+  [[ -n "$name" ]] || { echo "error: $manifest has no playground name." >&2; return 1; }
+  tag="$(current_tag)"
+  echo "Updating the playground $name to $image_repo:$tag..."
+  if ! labctl playground update "$name" -f "$manifest"; then
+    echo "error: the playground update failed. Retry with: playground/iximiuz/publish.sh --sync-remote" >&2
+    return 1
+  fi
+}
+
+if [[ "${1:-}" == -h || "${1:-}" == --help ]]; then
+  usage
+  exit 0
 fi
+if [[ $# -gt 1 || ( "${1:-}" == -* && "$1" != --sync-remote ) ]]; then
+  usage >&2
+  exit 2
+fi
+if ! labctl auth whoami >/dev/null 2>&1; then
+  echo "error: labctl is not logged in. Run 'labctl auth login' first." >&2
+  exit 1
+fi
+
+if [[ "${1:-}" == --sync-remote ]]; then
+  sync_remote_playground
+  exit 0
+fi
+
+old_tag="$(current_tag)"
+if [[ $# -eq 1 ]]; then
+  new_tag="$1"
+else
+  new_tag="$(next_image_tag "$old_tag")"
+fi
+[[ "$new_tag" =~ ^v[1-9][0-9]*$ ]] || { echo "error: '$new_tag' is not a versioned tag like v11." >&2; exit 2; }
+[[ "$new_tag" != "$old_tag" ]] || { echo "error: $new_tag is already in use. Choose a new tag." >&2; exit 2; }
+new_image="$image_repo:$new_tag"
+
+echo "Publishing $new_tag (replacing $old_tag)..."
+ROOTFS_IMAGE="$new_image" PUSH_IMAGE=1 bash "$root/playground/iximiuz/build-rootfs-image.sh"
+echo "Setting $new_tag in $manifest..."
+set_manifest_tag "$new_tag"
+sync_remote_playground
+echo "Published $new_image."

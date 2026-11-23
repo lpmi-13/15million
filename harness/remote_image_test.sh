@@ -5,7 +5,8 @@ set -euo pipefail
 run_id="${1:?usage: remote_image_test.sh PLAYGROUND_RUN_ID}"
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 report="$root/harness/reports/image-15m"
-rootfs_image="${ROOTFS_IMAGE:-ghcr.io/lpmi-13/15million-rootfs:v10}"
+rootfs_image="${ROOTFS_IMAGE:-$(sed -nE 's#^[[:space:]]*- source: oci://([^[:space:]]+).*#\1#p' \
+  "$root/playground/iximiuz/manifest.yaml" | head -n 1)}"
 image_id="$(docker image inspect "$rootfs_image" --format '{{.Id}}')"
 image_digest="$(docker buildx imagetools inspect "$rootfs_image" --format '{{.Manifest.Digest}}')"
 [[ "$image_digest" == sha256:* ]] || { echo "Could not resolve the pushed image digest." >&2; exit 1; }
