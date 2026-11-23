@@ -55,7 +55,11 @@ def main() -> None:
     parser.add_argument("--socket", default="/run/15m-lab/status.sock")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    status = read_status(args.socket)
+    try:
+        status = read_status(args.socket)
+    except OSError:
+        raise SystemExit("The runtime is not running. Check its log with "
+                         "'journalctl -u 15m-runtime.service -n 50 --no-pager'.") from None
     status["cgroup"] = cgroup_status(status["pid"])
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)

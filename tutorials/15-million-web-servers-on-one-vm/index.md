@@ -5,7 +5,7 @@ title: Can One VM Host 15 Million Web Servers?
 
 description: |
   All credit to the original article "15 million web servers on one VM" (kapteko.com).
-  Write and run C and Rust code while reproducing the Linux limits behind the source article:
+  Edit, compile, and run small C and Rust programs while reproducing the Linux limits behind the source article:
   ephemeral ports, per-process memory, and idle kernel sockets. Then run 15,000,000 smoltcp listeners in one
   user-space process and probe them from a second VM. The final step needs a 10 GiB server VM.
 
@@ -113,12 +113,6 @@ kind: warning
 The full 15,000,000-listener run needs the 10 GiB server VM. On the free tier's 4 GiB VM, steps 1 to 5 and the
 1,000,000-listener run still work. In our test, the 15,000,000-listener process ran out of memory after about
 5 million listeners, so the final check cannot pass on that VM.
-
-At the last step, `Started 15000000 listeners` means the service launched with that target. An immediate status
-may show `requested: 15000000`, `initialized: 0`, and `ready: false` while it builds the listeners. The `last`
-address is calculated from the target count. The 9 GiB `memory_max` is the service's configured limit, even
-on a 4 GiB VM. Zero OOM counters in this early snapshot do not mean the full run will finish. The last 20
-journal lines can include an earlier run, so compare their timestamps and process IDs.
 ::
 
 This is **not** my original work; all credit goes to the author of [15 million web servers on one VM](https://kapteko.com/15-million-webservers/), a very cool article that I wanted to have a one-click environment to play through
@@ -145,7 +139,7 @@ The starter code that you edit is in `/home/laborant/15m-work` on the server VM.
 The commands use absolute paths, so you can run them from any directory.
 Run the commands in steps 1 to 5 in the **Server** tab (dev-01).
 Step 6 says which commands go to the **Client** tab (client-01).
-The privileged commands use fixed sudo rules. The process loops in steps 2 and 4 and the socket loop in step 5 run inside small memory cgroups, so the VM stays usable after each OOM kill. The wrapper prints the kernel's `memory.events` counter and saves a report in `/var/lib/15m-lab/runs/`.
+The privileged commands use fixed sudo rules. `sudo` works only for the exact commands in this tutorial, and `sudo -l` lists them. The process loops in steps 2 and 4 and the socket loop in step 5 run inside small memory cgroups, so the VM stays usable after each OOM kill. The wrapper prints the kernel's `memory.events` counter and saves a report in `/var/lib/15m-lab/runs/`.
 
 ## 1. First HTTP response
 
@@ -230,6 +224,8 @@ sudo /opt/15m-lab/toolbox/bounded.sh article 'for ((i=1; i<=15000000; i++)); do 
 > Bash rejects the article's `&;`, so `&` alone ends each command here.
 > GNU `seq` rejects the underscores in `15_000_000`, so Bash's arithmetic `for` counts to 15,000,000 instead. It also avoids building a 15-million-word list before the first server starts.
 > The `bounded.sh` wrapper runs the loop in a 32 MiB memory cgroup, so the VM stays usable when the memory runs out.
+> This cap stops the loop after fewer than 200 servers.
+> Without the cap, the loop on the 10 GiB VM stops at about 26,400 servers, when `fork()` fails at the task limit of your user's systemd slice. That is still before the ephemeral ports run out.
 
 The loop reaches the process-memory limit before it runs out of ports.
 The wrapper first prints a `Killed` message for the loop's shell. On the test VM, the output ended like this:
@@ -367,9 +363,13 @@ sudo ip -6 route add local 2001:db8:1234:5678::/64 dev lo
 sudo sysctl -w net.ipv6.ip_nonlocal_bind=1
 /opt/15m-lab/baseline/bin/bound_server 2001:db8:1234:5678::1 8081 alpha &
 /opt/15m-lab/baseline/bin/bound_server 2001:db8:1234:5678::2 8081 beta &
+sleep 0.2
 curl -g -6 --noproxy '*' -w '\n' 'http://[2001:db8:1234:5678::1]:8081/'
 curl -g -6 --noproxy '*' -w '\n' 'http://[2001:db8:1234:5678::2]:8081/'
 ```
+
+The `&` starts each server in the background, so the shell moves on to the next command right away.
+`sleep 0.2` is only there for when you paste the whole block at once. It gives both servers time to bind their addresses before the first `curl` connects.
 
 `sysctl` confirms the new setting, and each address answers with its own reply:
 
@@ -437,6 +437,7 @@ curl --noproxy '*' -w '\n' 'http://127.0.0.2:8081/'
 curl --noproxy '*' -w '\n' 'http://127.0.0.3:8081/'
 ```
 
+As in step 3, `sleep 0.2` gives the background servers time to bind before `curl` connects when you paste the whole block at once.
 Each server replies with its index:
 
 ```text
@@ -529,6 +530,7 @@ The process probe reached its memory limit.
 ::
 
 On the test run above, the loop reached index 168 before the 32 MiB OOM kill. That is roughly 200 KB per attempt, or about 3 TB for 15 million processes. This is only a rough projection: the last index is not a count of live processes, and Bash and cgroup bookkeeping also use memory. Your result can differ with the executable, shared pages, kernel, and allocator.
+The article reports about 1.5 MB per server, or about 20 TB for 15 million.
 The OOM kill stays inside the probe's cgroup.
 
 ## 5. Do idle kernel sockets cost nothing?
@@ -695,7 +697,7 @@ Waiting for a socket probe report with a cgroup OOM kill...
 The idle sockets filled the probe's memory limit.
 ::
 
-The task records take 240,000,000 bytes, which is about 229 MiB.
+The 15 million 16-byte contexts take 240,000,000 bytes, which is about 229 MiB.
 Idle kernel sockets cost far more per entry.
 On the test VM, the cgroup hit its limit at about 18,000 sockets, which is about 3.7 KB per socket.
 Most of that memory was kernel slab.
@@ -817,6 +819,15 @@ sudo /opt/15m-lab/toolbox/runtime.sh status | jq .
 journalctl -u 15m-runtime.service -n 20 --no-pager
 ```
 
+::remark-box
+`Started 15000000 listeners` means the service launched with that target.
+An immediate status may show `requested: 15000000`, `initialized: 0`, and `ready: false` while it builds the listeners.
+The `last` address is calculated from the target count.
+The 9 GiB `memory_max` is the service's configured limit, even on a 4 GiB VM.
+Zero OOM counters in this early snapshot do not mean the full run will finish.
+The last 20 journal lines can include an earlier run, so compare their timestamps and process IDs.
+::
+
 On the 10 GiB VM, initialization takes about 5 to 15 seconds after the service starts.
 Run the `status` command again until it shows `"ready": true` and `"initialized": 15000000`.
 The journal shows the listener count as it grows. On the test VM, its last lines were:
@@ -882,7 +893,7 @@ It stops the lab services and moves the old reports to `/var/lib/15m-lab/archive
 ## What the numbers show
 
 On the test VM, the full run peaked at 9,258,868,736 bytes in its cgroup, which is about 617 bytes per listener.
-The VM still had about 870 MiB of memory available.
+The VM still had about 830 MiB of memory available.
 The table compares the three ways to give every address its own listener.
 
 | Approach | Measured cost per address | Projected for 15 million |
