@@ -110,9 +110,15 @@ tasks:
 kind: warning
 ---
 
-The full tutorial only runs successfully in the premium tier. You can still work through the super cool article, but when
-you get to the last step, you won't be able to run the full 15 million web servers in the 4GB VM.
-On a 4 GiB server VM, steps 1 to 5 and the 1,000,000-listener run still work, but the kernel kills the 15,000,000-listener run after about 5 million listeners.
+The full 15,000,000-listener run needs the 10 GiB server VM. On the free tier's 4 GiB VM, steps 1 to 5 and the
+1,000,000-listener run still work. In our test, the 15,000,000-listener process ran out of memory after about
+5 million listeners, so the final check cannot pass on that VM.
+
+At the last step, `Started 15000000 listeners` means the service launched with that target. An immediate status
+may show `requested: 15000000`, `initialized: 0`, and `ready: false` while it builds the listeners. The `last`
+address is calculated from the target count. The 9 GiB `memory_max` is the service's configured limit, even
+on a 4 GiB VM. Zero OOM counters in this early snapshot do not mean the full run will finish. The last 20
+journal lines can include an earlier run, so compare their timestamps and process IDs.
 ::
 
 This is **not** my original work; all credit goes to the author of [15 million web servers on one VM](https://kapteko.com/15-million-webservers/), a very cool article that I wanted to have a one-click environment to play through
@@ -811,7 +817,7 @@ sudo /opt/15m-lab/toolbox/runtime.sh status | jq .
 journalctl -u 15m-runtime.service -n 20 --no-pager
 ```
 
-The start takes about 5 to 15 seconds.
+On the 10 GiB VM, initialization takes about 5 to 15 seconds after the service starts.
 Run the `status` command again until it shows `"ready": true` and `"initialized": 15000000`.
 The journal shows the listener count as it grows. On the test VM, its last lines were:
 
