@@ -129,7 +129,7 @@ curl ── 10.0.0.0/8 route ── smolbench (TUN) ── smoltcp ── HTTP t
 The read-only lab files are in `/opt/15m-lab`, and `~/15m-lab` is a link to that directory.
 The starter code that you edit is in `/home/laborant/15m-work`.
 The commands use absolute paths, so you can run them from any directory.
-The privileged commands use fixed sudo rules. `sudo` works only for the exact commands in this tutorial, and `sudo -l` lists them. The process loops in steps 2 and 4 and the socket loop in step 5 run inside small memory cgroups, so the VM stays usable after each OOM kill. The wrapper prints the kernel's `memory.events` counter and saves a report in `/var/lib/15m-lab/runs/`.
+The privileged commands use fixed sudo rules. `sudo` works only for the exact commands in this tutorial, and `sudo -l` lists them. The process loops in steps 2 and 4 and the socket loop in step 6 run inside small memory cgroups, so the VM stays usable after each OOM kill. The wrapper prints the kernel's `memory.events` counter and saves a report in `/var/lib/15m-lab/runs/`.
 
 ## 1. First HTTP response
 
@@ -168,7 +168,7 @@ Recompile the edited file, start the server, and send it a request:
 
 ```bash
 cc -O2 -Wall -Wextra -Werror -std=c11 /home/laborant/15m-work/server.c -o /home/laborant/15m-work/server
-PORT_FILE=/tmp/15m-baseline.port /home/laborant/15m-work/server >/tmp/15m-baseline.log 2>&1 &
+PORT_FILE=/tmp/15m-baseline.port /home/laborant/15m-work/server >/tmp/15m-baseline.log 2>&1 & baseline_pid=$!
 for _ in $(seq 1 20); do [ -s /tmp/15m-baseline.port ] && break; sleep 0.1; done
 cat /tmp/15m-baseline.log
 curl --noproxy '*' -w '\n' "http://127.0.0.1:$(cat /tmp/15m-baseline.port)/"
@@ -202,6 +202,12 @@ The program uses seven calls.
 To see them, run a second copy with `strace -e trace=network /home/laborant/15m-work/server` and send it a request.
 On x86-64, `strace` shows `recv()` and `send()` as `recvfrom()` and `sendto()`, because glibc implements them with those system calls.
 
+After the check completes, stop the baseline server:
+
+```bash
+kill "$baseline_pid"
+```
+
 ## 2. How many unbound listeners fit?
 
 The article's first loop starts the no-argument server 15 million times. Each copy makes one unbound TCP listener. Run this version of the loop:
@@ -218,7 +224,7 @@ sudo /opt/15m-lab/toolbox/bounded.sh article 'for ((i=1; i<=15000000; i++)); do 
 > Without the cap, the loop on the 10 GiB VM stops at about 26,400 servers, when `fork()` fails at the task limit of your user's systemd slice. That is still before the ephemeral ports run out.
 
 The loop reaches the process-memory limit before it runs out of ports.
-The wrapper first prints a `Killed` message for the loop's shell. On the test VM, the output ended like this:
+Bash may print a `Killed` job line with part of the wrapper command when the cgroup reaches its limit. On the test VM, the useful output ended like this:
 
 ```text
 136
@@ -261,7 +267,7 @@ while (count < requested) {
 `requested` is the command-line argument, which is 15,000,000 here. Each iteration calls `socket()` and `listen()` without `bind()`, then keeps the open socket in `fds`. The loop stops as soon as `listen()` fails.
 
 ::remark-box
-The `port_exhaust` command takes about 25 seconds and prints nothing until it finishes, because its output goes to files.
+The `port_exhaust` command can take several seconds and prints nothing until it finishes, because its output goes to files.
 Each implicit bind searches the range for a free port, so each `listen()` call is slower than the one before it.
 ::
 
@@ -338,7 +344,7 @@ The count on your VM depends on its ephemeral range. The fresh namespace keeps u
 
 The check accepts only a run that stopped at `listen()` with `errno` 98 (`EADDRINUSE`) after it used up the ephemeral range.
 Another `errno` means that a different limit was hit first, such as the open file limit.
-Such a run shows nothing about ports. Check your open file limit with `ulimit -n`.
+Such a run shows nothing about ports. Read `/tmp/15m-port.err` and the report's `failed_syscall` and `errno` values to see what stopped the probe.
 ::
 
 ## 3. Add addresses with AnyIP
@@ -351,8 +357,8 @@ One binds `2001:db8:1234:5678::1`, and the other binds `2001:db8:1234:5678::2`.
 ```bash
 sudo ip -6 route add local 2001:db8:1234:5678::/64 dev lo
 sudo sysctl -w net.ipv6.ip_nonlocal_bind=1
-/opt/15m-lab/baseline/bin/bound_server 2001:db8:1234:5678::1 8081 alpha &
-/opt/15m-lab/baseline/bin/bound_server 2001:db8:1234:5678::2 8081 beta &
+/opt/15m-lab/baseline/bin/bound_server 2001:db8:1234:5678::1 8081 alpha & alpha_pid=$!
+/opt/15m-lab/baseline/bin/bound_server 2001:db8:1234:5678::2 8081 beta & beta_pid=$!
 sleep 0.2
 curl -g -6 --noproxy '*' -w '\n' 'http://[2001:db8:1234:5678::1]:8081/'
 curl -g -6 --noproxy '*' -w '\n' 'http://[2001:db8:1234:5678::2]:8081/'
@@ -381,6 +387,12 @@ Waiting for two IPv6 servers to answer on the same port...
 Both addresses answered on port 8081.
 ::
 
+After the check completes, stop both test servers:
+
+```bash
+kill "$alpha_pid" "$beta_pid"
+```
+
 A `local` route makes the kernel accept traffic for a whole prefix as local, without assigning each address to an interface.
 This technique is called AnyIP.
 On this 6.1 kernel, the explicit IPv6 binds still failed with `EADDRNOTAVAIL` until `net.ipv6.ip_nonlocal_bind=1` was set.
@@ -392,7 +404,7 @@ Each new address brings its own full set of ports, so addresses scale where proc
 Two other fixes might come to mind: many more network cards, or a wider port field in TCP.
 Extra cards add hardware and drivers for something that a single route already gives.
 A wider port field would change the TCP header that every other host expects.
-The runtime in step 6 uses the same idea with private IPv4 addresses.
+The runtime in step 7 uses the same idea with private IPv4 addresses.
 
 ## 4. One process per address
 
@@ -463,7 +475,7 @@ sudo /opt/15m-lab/toolbox/bounded.sh process 'for ((i=1; i<=15000000; i++)); do 
 > Bash rejects `&;`, GNU `seq` rejects `15_000_000`, and the wrapper keeps the loop in a 32 MiB cgroup.
 > The wrapper also runs the loop as `laborant`, limits it to 45 seconds and 400 processes, and removes the whole group when the kernel records an OOM kill.
 
-After the `Killed` message, the output on the test VM ended like this:
+As in step 2, Bash may print a `Killed` job line. On the test VM, the useful output ended like this:
 
 ```text
 161
@@ -479,29 +491,25 @@ Out of memory
 report=/var/lib/15m-lab/runs/1795450688-1265/process.json
 ```
 
-The last line is the path of a JSON report. Read the report with `jq`:
+The last line is the path of a JSON report. Show the fields used here with `jq`:
 
 ```bash
-jq . /var/lib/15m-lab/runs/*/process.json
+jq '{kind, cgroup_limit, memory_peak, observed_count, requested_count, bytes_per_item_estimate, events}' /var/lib/15m-lab/runs/*/process.json
 ```
 
-If you ran the loop more than once, `jq` prints one report for each run. The report from the test VM was:
+If you ran the loop more than once, `jq` prints one result for each run. The selected fields from the test VM were:
 
 ```json
 {
-  "schema": 1,
   "kind": "process",
-  "unix_time": 1795450688,
   "cgroup_limit": 33554432,
   "memory_peak": 33554432,
   "observed_count": 168,
   "requested_count": 0,
   "bytes_per_item_estimate": 199728.7619047619,
-  "slab_peak_observed": 3746144,
   "events": {
     "oom_kill": 2
-  },
-  "ok": true
+  }
 }
 ```
 
@@ -523,7 +531,7 @@ On the test run above, the loop reached index 168 before the 32 MiB OOM kill. Th
 The article reports about 1.5 MB per server, or about 20 TB for 15 million.
 The OOM kill stays inside the probe's cgroup.
 
-## 5. Do idle kernel sockets cost nothing?
+## 5. Model the article's context
 
 The article sketches a Rust `Context` with a program counter and two file descriptors. Open `/home/laborant/15m-work/context.rs`. The starter program checks the context size and calculates the first, middle, and last listener addresses. Compile and run it before editing:
 
@@ -607,7 +615,10 @@ Waiting for your compiled Rust context and address calculation...
 The Rust context and addresses are correct.
 ::
 
-Your Rust program models the article's context. The full runtime in step 6 has its own 16-byte `Task` layout.
+Your Rust program models the article's context. Fifteen million of these 16-byte contexts take 240,000,000 bytes, which is about 229 MiB. The full runtime in step 7 has its own 16-byte `Task` layout.
+
+## 6. Do idle kernel sockets cost nothing?
+
 Now predict whether **unbound, idle kernel TCP sockets** cost any memory.
 This is the main loop of `/opt/15m-lab/baseline/socket_cost.c`:
 
@@ -631,7 +642,7 @@ It follows the article's 10,000,000-socket loop. It creates TCP sockets without 
 sudo /opt/15m-lab/toolbox/bounded.sh socket '/opt/15m-lab/baseline/bin/socket_cost 10000000'
 ```
 
-After the `Killed` message, the output on the test VM ended like this:
+As in step 2, Bash may print a `Killed` job line. On the test VM, the useful output ended like this:
 
 ```text
 count=11000
@@ -647,33 +658,27 @@ Out of memory
 report=/var/lib/15m-lab/runs/1795450704-1501/socket.json
 ```
 
-Read the report with `jq`:
+Show the fields used here with `jq`:
 
 ```bash
-jq . /var/lib/15m-lab/runs/*/socket.json
+jq '{kind, cgroup_limit, memory_peak, observed_count, requested_count, bytes_per_item_estimate, events}' /var/lib/15m-lab/runs/*/socket.json
 ```
 
-The report from the test VM was:
+The selected fields from the test VM were:
 
 ```json
 {
-  "schema": 1,
   "kind": "socket",
-  "unix_time": 1795450704,
   "cgroup_limit": 67108864,
   "memory_peak": 67108864,
   "observed_count": 18000,
   "requested_count": 10000000,
   "bytes_per_item_estimate": 3728.2702222222224,
-  "slab_peak_observed": 66733856,
   "events": {
     "oom_kill": 3
-  },
-  "ok": true
+  }
 }
 ```
-
-`slab_peak_observed` is the highest kernel slab memory that the wrapper saw in the cgroup.
 
 ::simple-task
 ---
@@ -687,15 +692,13 @@ Waiting for a socket probe report with a cgroup OOM kill...
 The idle sockets filled the probe's memory limit.
 ::
 
-The 15 million 16-byte contexts take 240,000,000 bytes, which is about 229 MiB.
 Idle kernel sockets cost far more per entry.
-On the test VM, the cgroup hit its limit at about 18,000 sockets, which is about 3.7 KB per socket.
-Most of that memory was kernel slab.
+On the test VM, the cgroup hit its limit at about 18,000 sockets, which is about 3.7 KB of total charged memory per socket.
 The probe prints its count every 1,000 sockets, so the real count at the OOM kill was a little higher.
 At 3.7 KB each, 15 million kernel sockets would need about 56 GB.
-This is why the listeners in step 6 live in user space.
+This is why the listeners in step 7 live in user space.
 
-## 6. Fifteen million listeners in one process
+## 7. Fifteen million listeners in one process
 
 The runtime in `/opt/15m-lab/runtime/src/` is a Rust program built on [`smoltcp`](https://github.com/smoltcp-rs/smoltcp), a TCP/IP stack that runs in user space.
 On dev-01, Linux routes `10.0.0.0/8` to a TUN device called `smolbench`.
