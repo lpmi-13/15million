@@ -34,6 +34,16 @@ The final custom playground source is `playground/iximiuz/manifest.yaml`. Its `n
 
 `playground/iximiuz/publish.sh` with no arguments publishes the tag after the one in `manifest.yaml` (`v10` becomes `v11`). Pass a tag to choose it yourself. The script builds and pushes the image, sets the new tag in `manifest.yaml`, and updates the registered playground from it. If the playground update fails, `publish.sh --sync-remote` retries only that step. The script does not test the image or push the tutorial. Run `harness/remote_image_test.sh` and `labctl content push` separately when you need them. `harness/tutorial_walkthrough.sh PLAY_ID` follows every learner command in a running tutorial session on both VMs and waits for all examiner tasks. [iximiuz access controls](https://labs.iximiuz.com/courses/labs-docs/content-authoring/access-control) are set in the content menu, separately from the playground.
 
+To push only the tutorial's `index.md` edits, run this command from the repository root:
+
+```bash
+labctl content push tutorial 15-million-web-servers-on-one-vm-87084d2a \
+  --dir tutorials/15-million-web-servers-on-one-vm \
+  --file index.md --force
+```
+
+The remote tutorial name includes the `-87084d2a` suffix, while its local directory does not. The `--file` path is relative to that directory. Start a new tutorial session to use changes to playground tasks.
+
 ## Report format
 
 The learner's port command writes `/tmp/15m-port.json`. The bounded shell wrapper writes a JSON report under `/var/lib/15m-lab/runs/<run-id>/` and prints the actual cgroup OOM counter. The AnyIP task checks the live route and HTTP replies. With `--output`, the final client grader also saves a report with live before/after status, cgroup memory/events, sampled TCP/HTTP responses, and out-of-range behavior. Every grader prints one line when it fails, and with `--hint-file` it writes that line to `/var/lib/15m-lab/hints/` for the task's `hintcheck:` script. Server status includes RSS/PSS, executable SHA-256, and VM total/available memory. `reset.sh` stops the lab services, removes lab-created network/cgroup state, and archives reports before restoring an empty `runs/` directory.

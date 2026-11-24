@@ -110,7 +110,7 @@ The full 15,000,000-listener run needs the 10 GiB VM. On the free tier's 4 GiB V
 This is **not** my original work; all credit goes to the author of [15 million web servers on one VM](https://kapteko.com/15-million-webservers/), a very cool article that I wanted to have a one-click environment to play through
 (just since some of the commands are very low level and I didn't wanna risk borking my own system).
 
-I wanted to not just read the article, but actually see this happening, and it just so happens that the stated resources need (ie, under 10GB of RAM) are available on a single VM in the iximiuz Labs remote environment! So this is a tutorial to "play along" with as you read the article (which is an absolute *must read*, since it gives way more context and background details about what's going on with the networking stack).
+I wanted to not just read the article, but actually see this happening, and it just so happens that the stated resources needed (ie, under 10GB of RAM) are available on a single VM in the iximiuz Labs remote environment! So this is a tutorial to "play along" with as you read the article (which is an absolute *must read*, since it gives way more context and background details about what's going on with the networking stack).
 
 First, you edit a C server and hit three Linux resource limits with bounded experiments.
 Then you write a small Rust context and address calculation before starting a compact runtime with 15 million listeners.
