@@ -20,7 +20,7 @@ playground:
             Edit the starters in ~/15m-work. Start with the C baseline and
             bounded probes. The 15-million-listener runtime is stopped at boot.
       drives:
-        - source: oci://ghcr.io/lpmi-13/15million-rootfs:v11
+        - source: oci://ghcr.io/lpmi-13/15million-rootfs:v12
           mount: /
           size: 20GiB
       network:

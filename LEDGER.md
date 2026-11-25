@@ -1,6 +1,6 @@
 # 15 million web servers: handoff ledger
 
-**2026-11-25 tier update.** Free-tier limits now allow the full tutorial run. The old 4 GiB free-tier result below is a historical test, and the outdated warning has been removed from the tutorial and README.
+**2026-11-25 v12 release and tier check.** The updated image passed the full 15,000,000-listener test on a 10 GiB playground, with a 9,258,860,544-byte service-cgroup peak and 12 concurrent requests. The registered playground now uses `v12`, and a pulled copy of the live tutorial matches the local `index.md` and cover byte for byte. A separate playground started with `--as-free-tier-user` still received 4 GiB of RAM and OOM-killed the run at about 5,959,000 listeners. The reported free-tier limit change is not reflected by this test flag; confirm the platform setting before claiming the full run works for free-tier users.
 
 Updated: 2026-11-25. This file is the starting point for a fresh context.
 
@@ -26,7 +26,7 @@ The learner material, runtime, probes, graders, rootfs Dockerfile, and two-VM pl
 
 **2026-11-21 conversion to a tutorial.** A `labs-review-challenge` review of the challenge `15-million-webservers-449c3122` found three blockers. Every task passed by copying the given commands. Free-tier playgrounds get a 4 GiB server VM (2 CPUs, and 1 CPU / 1.3 GiB for client-01), where the 15M run is OOM-killed after about 5 million listeners. The documented `cat` of the probe reports failed because the reports were mode `0600`. The material is now the tutorial `tutorials/15-million-web-servers-on-one-vm/` (title kept, cover in `__static__/cover.png`). `solution.md` was folded into the tutorial text, without the build history and harness paths. The root `index.md` and `solution.md` are gone.
 
-The registered image is `ghcr.io/lpmi-13/15million-rootfs:v10` (image ID `sha256:aa8a3f91e9f3132cc82cb3c11abc0d96572b9fabe63d9fc38bc3a43cf1a94428`). The runtime binary is unchanged from `v3` (SHA-256 `340b9cfc...`). `publish.sh` checks that the image tag resolves to the tested digest. Playground `15-million-webservers-lab-bb24aaad` lets anyone list, read, and start it.
+The registered image is `ghcr.io/lpmi-13/15million-rootfs:v12` (image ID `sha256:47d5dd1eb4e68d80a05db39b9c70f0f06670be9261c99ca1646ad01384eed829`, digest `sha256:a5df87d243f427a4a19e443963178a4da62ad81e2aefde5368821f00c30254d1`). The runtime binary is unchanged from `v3` (SHA-256 `340b9cfc...`). Playground `15-million-webservers-lab-bb24aaad` lets anyone list, read, and start it.
 
 **Authorization state:** The user approved pushing the image, registering the playground, publishing the challenge content, and testing the steps in a fresh learner session. These actions are complete. The user made the GHCR package public so iximiuz could pull it. On 2026-11-21 the user asked to convert the challenge to a tutorial and rebuild the image as `v4`. `v4` is pushed and tested. With the user's approval, `publish.sh` updated the registered playground to `v4` and created the tutorial [`15-million-web-servers-on-one-vm-87084d2a`](https://labs.iximiuz.com/tutorials/15-million-web-servers-on-one-vm-87084d2a) as a private draft. At the user's request, the challenge `15-million-webservers-449c3122` was removed with `labctl content remove`. Its sources remain in Git history.
 
@@ -57,9 +57,9 @@ The disposable preflight session was `6b0162dc3ac59e6193a9cac8` (`flexbox`, titl
 | `harness/reports/image-v2-15m/` | Complete pushed `v2` OCI rootfs | See report | Passed the release checker; superseded by `v3`. |
 | `harness/reports/learner-v2-15m/` | Fresh learner walkthrough, session `6b01c6c6a8263b1b6c6f92c9` | 9,258,881,024 bytes | 10,596 ms startup; no OOM; all tasks red-to-green; 12-client check passed. |
 | `harness/reports/image-v3-15m/` | Complete pushed `v3` OCI rootfs, session `6b01c89c1bf49ab62d63b9f3` | 9,258,876,928 bytes | 13,654 ms startup; 887,864 KiB available; no OOM; 12-client check passed. |
-| `harness/reports/image-15m/` | Complete pushed `v10` OCI rootfs, session `6b046b6f1376641507bffe82` | **9,258,881,024 bytes** | 14,260 ms startup; no runtime OOM; editable C and Rust stages, article-scale loop bounds, 28,232 port count, and 12-client check passed. Current release report. |
+| `harness/reports/image-15m/` | Complete pushed `v12` OCI rootfs, session `6b06ae626858837e61be0241` (destroyed) | **9,258,860,544 bytes** | 10,983 ms startup; no runtime OOM; editable C and Rust stages, article-scale loop bounds, 28,232 port count, and 12-client check passed. Current release report. |
 
-The historical `v3` image ID was `sha256:5d27dfc56c00df1a1ec89409059b28d13927c31a6b1555666c40b6fe436d6e96`, registry digest `sha256:1f1df211025a8cdd9864ff4f046d5e62d0f8d4ad4aafb8085525a5389e7f309d`, and executable SHA-256 `340b9cfc26083d8955250b4d15d54fecbf457abfd4053d122dda9b7103b908c8`. The `v10` image has the same runtime binary. `harness/check_release.py` passed on the `v10` image report.
+The historical `v3` image ID was `sha256:5d27dfc56c00df1a1ec89409059b28d13927c31a6b1555666c40b6fe436d6e96`, registry digest `sha256:1f1df211025a8cdd9864ff4f046d5e62d0f8d4ad4aafb8085525a5389e7f309d`, and executable SHA-256 `340b9cfc26083d8955250b4d15d54fecbf457abfd4053d122dda9b7103b908c8`. The `v12` image has the same runtime binary. `harness/check_release.py` passed on the `v12` image report.
 
 The bounded probes in `harness/reports/preflight-failures/` observed: ephemeral range `32768–60999` and 28,232 implicit-bind listeners before `EADDRINUSE`; two IPv6 AnyIP responses (`alpha`, `beta`) with namespace-local `ip_nonlocal_bind=1`; cgroup OOM after about 210 tiny processes under 32 MiB; and socket cgroup OOM after the last observed 18,000 unbound sockets under 64 MiB. Baseline, evidence, and final graders were checked red before their actions and green after them. The final grader rejected 1,000 listeners. A malformed route failed with a useful diagnostic, and reset restored a working start. Remote operations used `labctl ssh`, `labctl cp`, and playground lifecycle commands.
 
@@ -83,12 +83,13 @@ A task in the tutorial cannot `needs:` an init task defined by the playground ma
 
 Still open:
 
-1. **Access.** Tutorial access is set in the iximiuz content menu, not by `labctl`. Check a logged-out visit after publishing.
+1. **Free-tier provisioning.** Confirm why `labctl playground start --as-free-tier-user` still caps `dev-01` at 4 GiB, despite the reported limit change.
+2. **Access.** Tutorial access is set in the iximiuz content menu, not by `labctl`. Check a logged-out visit after publishing.
 
 The source plan also called for matched x86_64 fixed-guest assembly (candidate A) and stackless async (candidate C) comparisons. Neither was implemented or measured. The stackful candidate D is only an analytical negative control. TAP is compiled as an optional feature but has no matched remote benchmark; AF_XDP and DPDK were deferred. Do not claim that the four-way architecture study or backend comparison is complete. These are separate research tasks if the published lesson is to make comparative claims. The measured candidate B result is sufficient for the current learner task's fixed-purpose runtime claim.
 
 ## Working-tree and safety notes
 
-No commit or PR was made for the tutorial conversion. The versioned Docker images are public on GHCR, and the playground is public and listed. `playground/iximiuz/manifest.yaml` and the tutorial's `index.md` contain the registered playground name. `harness/reports/image-15m/` contains the passing `v9` exact-image report. All agent-created revision test playgrounds were destroyed. An already-running tutorial session (`6b021209c30725dbd601e11b`) was left untouched.
+No commit or PR was made for the tutorial conversion. The versioned Docker images are public on GHCR, and the playground is public and listed. `playground/iximiuz/manifest.yaml` and the tutorial's `index.md` contain the registered playground name. `harness/reports/image-15m/` contains the passing `v12` exact-image report. All agent-created revision test playgrounds were destroyed. An already-running tutorial session (`6b021209c30725dbd601e11b`) was left untouched.
 
 For remote playground work use `labctl`; do not substitute SSH, `scp`, or a browser for remote interactions. The `rtk` prefix applies to local shell commands in this workspace. The tutorial uses private `10/8` only inside the playground; avoid changing host-wide port ranges or management NIC bindings. The exact-OCI acceptance test has passed.

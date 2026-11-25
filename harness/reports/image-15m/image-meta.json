@@ -1,7 +1,7 @@
 {
-  "image_digest": "sha256:1489ae4578cc65d1a34bd3ed17e562b00d6f05c03ebece87bb26082c9d705d85",
-  "image_id": "sha256:aa8a3f91e9f3132cc82cb3c11abc0d96572b9fabe63d9fc38bc3a43cf1a94428",
-  "image_ref": "ghcr.io/lpmi-13/15million-rootfs:v10",
-  "playground_id": "6b046b6f1376641507bffe82",
+  "image_digest": "sha256:a5df87d243f427a4a19e443963178a4da62ad81e2aefde5368821f00c30254d1",
+  "image_id": "sha256:47d5dd1eb4e68d80a05db39b9c70f0f06670be9261c99ca1646ad01384eed829",
+  "image_ref": "ghcr.io/lpmi-13/15million-rootfs:v12",
+  "playground_id": "6b06ae626858837e61be0241",
   "runtime_sha256": "340b9cfc26083d8955250b4d15d54fecbf457abfd4053d122dda9b7103b908c8"
 }
