@@ -1,6 +1,8 @@
 # 15 million web servers: handoff ledger
 
-Updated: 2026-11-21. This file is the starting point for a fresh context.
+**2026-11-25 tier update.** Free-tier limits now allow the full tutorial run. The old 4 GiB free-tier result below is a historical test, and the outdated warning has been removed from the tutorial and README.
+
+Updated: 2026-11-25. This file is the starting point for a fresh context.
 
 ## Objective and current state
 
@@ -32,7 +34,7 @@ The registered image is `ghcr.io/lpmi-13/15million-rootfs:v10` (image ID `sha256
 
 | Area | Files and purpose |
 |---|---|
-| Learner material | `tutorials/15-million-web-servers-on-one-vm/index.md` has predictions, editable C and Rust stages, bounded experiments, the measured results and their meaning, hints, a memory-requirement warning, and eight verification tasks with dynamic hints. Privileged commands use absolute `/opt/15m-lab` paths matching the narrow sudo policy. |
+| Learner material | `tutorials/15-million-web-servers-on-one-vm/index.md` has predictions, editable C and Rust stages, bounded experiments, the measured results and their meaning, hints, and eight verification tasks with dynamic hints. Privileged commands use absolute `/opt/15m-lab` paths matching the narrow sudo policy. |
 | Runtime | `runtime/` is an independent MIT-licensed Rust 1.96.0 project pinned by `Cargo.lock`, using `smoltcp 0.14.0`. It has one 16-byte task and one 24-byte resident entry/TCP listener per address, 48-byte RX/TX buffers, TUN by default, optional TAP compilation, an address-aware HTTP response, bounded active-flow state, and a live Unix status socket. |
 | C baseline | `baseline/` has the implicit-bind HTTP server, explicit-bound server, indexed loopback server, port exhaustion probe, and idle socket probe. |
 | Experiments and operations | `toolbox/` has the bounded cgroup shell wrapper, client probes, network setup, runtime control, status bridge, and reset. Process and socket reports are written under `/var/lib/15m-lab/runs/<run-id>/`. Reset stops the C servers and removes the AnyIP route. |
@@ -81,8 +83,7 @@ A task in the tutorial cannot `needs:` an init task defined by the playground ma
 
 Still open:
 
-1. **Tier limit.** Ask the iximiuz team whether the tutorial can be limited to tiers that get the 10 GiB VM. The text warns about it already.
-2. **Access.** Tutorial access is set in the iximiuz content menu, not by `labctl`. Check a logged-out visit after publishing.
+1. **Access.** Tutorial access is set in the iximiuz content menu, not by `labctl`. Check a logged-out visit after publishing.
 
 The source plan also called for matched x86_64 fixed-guest assembly (candidate A) and stackless async (candidate C) comparisons. Neither was implemented or measured. The stackful candidate D is only an analytical negative control. TAP is compiled as an optional feature but has no matched remote benchmark; AF_XDP and DPDK were deferred. Do not claim that the four-way architecture study or backend comparison is complete. These are separate research tasks if the published lesson is to make comparative claims. The measured candidate B result is sufficient for the current learner task's fixed-purpose runtime claim.
 

@@ -21,14 +21,6 @@ COUNT = 15_000_000
 BASE = int(ipaddress.IPv4Address("10.0.0.1"))
 LAST = "10.228.225.192"
 STATUS_URL = "http://172.16.0.2:9090/status"
-# The 10 GiB server VM reports about 9.8 GiB in MemTotal. Smaller VMs cannot hold the run.
-MIN_VM_TOTAL_KIB = 9.5 * 1024 * 1024
-
-
-def small_vm(total_kib: int) -> CheckFailed:
-    return CheckFailed(f"dev-01 has {total_kib / 1024 / 1024:.1f} GiB of RAM. The "
-                       "15,000,000-listener run needs the 10 GiB server VM, so it cannot "
-                       "finish on this VM.")
 
 
 def status() -> dict:
@@ -36,14 +28,7 @@ def status() -> dict:
     try:
         with opener.open(STATUS_URL, timeout=4) as response:
             return json.load(response)
-    except urllib.error.HTTPError as error:
-        try:
-            data = json.load(error)
-        except ValueError:
-            data = {}
-        total = data.get("vm_mem_total_kib")
-        if total and total < MIN_VM_TOTAL_KIB:
-            raise small_vm(total) from None
+    except urllib.error.HTTPError:
         raise CheckFailed("The runtime on dev-01 is not running. Start it with runtime.sh "
                           "and wait until its status shows ready: true.") from None
     except OSError as error:
@@ -53,8 +38,6 @@ def status() -> dict:
 
 def validate_status(data: dict) -> None:
     group = data["cgroup"]
-    if int(group["vm_mem_total_kib"]) < MIN_VM_TOTAL_KIB:
-        raise small_vm(int(group["vm_mem_total_kib"]))
     if data.get("requested") != COUNT:
         raise CheckFailed(f"The runtime was started with {data.get('requested'):,} listeners. "
                           f"The check needs {COUNT:,}.")

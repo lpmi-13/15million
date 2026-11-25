@@ -4,10 +4,11 @@ kind: tutorial
 title: Can One VM Really Host 15 Million Web Servers?
 
 description: |
-  All credit to the original article "15 million web servers on one VM" (kapteko.com).
-  Edit, compile, and run small C and Rust programs while reproducing the Linux limits behind the source article:
-  ephemeral ports, per-process memory, and idle kernel sockets. Then run 15,000,000 smoltcp listeners in one
-  user-space process and send requests to them. The final step needs a 10 GiB VM.
+  After reading "15 million web servers on one VM" (kapteko.com), I decided to see it in action for myself.
+  So this tutorial uses a real Linux VM to edit, compile, and run small C and Rust programs while reproducing
+  the Linux limits behind the source article. Explore ephemeral ports, per-process memory, and idle kernel sockets.
+  Then run 15,000,000 smoltcp listeners in one user-space process and send requests to them to reproduce the
+  findings from the article.
 
 categories:
   - linux
@@ -97,20 +98,10 @@ tasks:
       exit 0
 ---
 
-::remark-box
----
-kind: warning
----
-
-The full 15,000,000-listener run needs the 10 GiB VM. On the free tier's 4 GiB VM, steps 1 to 5 and the
-1,000,000-listener run still work. In our test, the 15,000,000-listener process ran out of memory after about
-5 million listeners, so the final check cannot pass on that VM.
-::
-
 This is **not** my original work; all credit goes to the author of [15 million web servers on one VM](https://kapteko.com/15-million-webservers/), a very cool article that I wanted to have a one-click environment to play through
 (just since some of the commands are very low level and I didn't wanna risk borking my own system).
 
-I wanted to not just read the article, but actually see this happening, and it just so happens that the stated resources needed (ie, under 10GB of RAM) are available on a single VM in the iximiuz Labs remote environment! So this is a tutorial to "play along" with as you read the article (which is an absolute *must read*, since it gives way more context and background details about what's going on with the networking stack).
+I wanted to not just read the article, but actually see this happening, and it just so happens that the resources needed (ie, just under 10GB of RAM) are available on a single VM in the iximiuz Labs remote environment! So this is a tutorial to "play along" with as you read the article (which is an absolute *must read*, since it gives way more context and background details about what's going on with the networking stack).
 
 First, you edit a C server and hit three Linux resource limits with bounded experiments.
 Then you write a small Rust context and address calculation before starting a compact runtime with 15 million listeners.
@@ -816,7 +807,7 @@ journalctl -u 15m-runtime.service -n 20 --no-pager
 `Started 15000000 listeners` means the service launched with that target.
 An immediate status may show `requested: 15000000`, `initialized: 0`, and `ready: false` while it builds the listeners.
 The `last` address is calculated from the target count.
-The 9 GiB `memory_max` is the service's configured limit, even on a 4 GiB VM.
+The 9 GiB `memory_max` is the service's configured limit.
 Zero OOM counters in this early snapshot do not mean the full run will finish.
 The last 20 journal lines can include an earlier run, so compare their timestamps and process IDs.
 ::

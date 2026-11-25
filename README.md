@@ -4,8 +4,6 @@ This is entirely based on the work in the article https://kapteko.com/15-million
 
 > [!IMPORTANT]
 > You can run this lab on iximiuz Labs as the tutorial [Can One VM Host 15 Million Web Servers?](https://labs.iximiuz.com/tutorials/15-million-web-servers-on-one-vm-87084d2a).
-> **It only runs successfully in the premium tier.**
-> The last step needs a 10 GiB server VM. Free-tier playgrounds get a 4 GiB server VM, and there the 15,000,000-listener run is killed after about 5 million listeners.
 
 For the complete handoff state and next steps, read [LEDGER.md](LEDGER.md).
 
@@ -13,7 +11,7 @@ This repository contains the iximiuz Labs tutorial [`15-million-web-servers-on-o
 
 A clean rerun, a run using the binary extracted from the local OCI image, and fresh runs of the complete pushed image all passed. Reports are in `harness/reports/repeat-15m/`, `harness/reports/image-binary-15m/`, and `harness/reports/image-15m/`. The current registered image is `ghcr.io/lpmi-13/15million-rootfs:v10` (digest `sha256:1489ae4578cc65d1a34bd3ed17e562b00d6f05c03ebece87bb26082c9d705d85`). Its exact-image run exercised the C and Rust edits, reproduced the article's `28232` port count, two real process OOM events from 15-million-bound loops, and the 10-million-bound idle socket OOM. The 15-million client and 12 concurrent checks passed with a 9,258,881,024-byte service-cgroup peak and no runtime OOM.
 
-The content was first uploaded as the challenge `15-million-webservers-449c3122`. A review found that every task passed by copying the given commands, so the material is now a tutorial, and the challenge was removed on 2026-11-21. Tutorials allow step-by-step commands. The 15,000,000-listener step needs the full 10 GiB server VM. Free-tier playgrounds get a 4 GiB server VM, where the full run is OOM-killed after about 5 million listeners.
+The content was first uploaded as the challenge `15-million-webservers-449c3122`. A review found that every task passed by copying the given commands, so the material is now a tutorial, and the challenge was removed on 2026-11-21. Tutorials allow step-by-step commands.
 
 ## Local build
 
